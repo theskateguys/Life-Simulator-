@@ -144,7 +144,7 @@ export function OutcomeModal({outcome, onContinue, fmt}) {
     <Modal accent={outcome.accent || C.green}>
       <div style={{textAlign:'center',marginBottom:12}}>
         <div style={{fontSize:40}}>{outcome.icon || '📖'}</div>
-        <p style={{fontSize:10,fontWeight:800,color:outcome.accent||C.green,letterSpacing:2,textTransform:'uppercase',margin:'6px 0 3px'}}>Decision outcome</p>
+        <p style={{fontSize:10,fontWeight:800,color:outcome.accent||C.green,letterSpacing:2,textTransform:'uppercase',margin:'6px 0 3px'}}>{outcome.kicker || 'Decision outcome'}</p>
         <h2 style={{fontSize:22,margin:0}}>{outcome.title}</h2>
       </div>
       <p style={{color:C.muted,fontSize:13,lineHeight:1.75,margin:'0 0 12px'}}>{outcome.text}</p>
@@ -173,7 +173,7 @@ export function OutcomeModal({outcome, onContinue, fmt}) {
         onClick={onContinue}
         style={{width:'100%',padding:13,borderRadius:12,cursor:'pointer',border:'none',fontWeight:900,fontSize:14,background:`linear-gradient(135deg,${outcome.accent||C.green},${C.gold})`,color:'#06121A'}}
       >
-        Continue →
+        {outcome.buttonLabel || 'Continue →'}
       </button>
     </Modal>
   );
