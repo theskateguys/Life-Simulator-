@@ -69,6 +69,29 @@ export const BACKGROUNDS = [
   {id:'wealthy', emoji:'🔵', label:'Well-Off Family', diff:'EASY', color:C.turquoise, cash:25000, desc:'Private school, network, head start.', monthlyModifier:1.20, stats:{happiness:75,health:80,workEthic:45,intelligence:70,relationships:65}}
 ];
 
+export const LIFE_GOALS = [
+  {id:'own_path', emoji:'🧭', label:'Choose My Own Path', short:'No fixed destiny', text:'Explore career, family, money, culture, and legacy at your own pace.'},
+  {id:'wealth', emoji:'💰', label:'Build Wealth', short:'Cash, assets, freedom', text:'Focus on savings, investments, business, and property ownership.'},
+  {id:'family', emoji:'👨‍👩‍👧', label:'Start a Family', short:'Love and legacy', text:'Build relationships, raise children, and continue your story through generations.'},
+  {id:'fame', emoji:'🌟', label:'Become Known', short:'Audience and influence', text:'Grow your creative path, reputation, followers, and brand opportunities.'},
+  {id:'business', emoji:'🏪', label:'Own a Business', short:'Hustle to empire', text:'Turn skills and opportunity into an operating business with real cash flow.'},
+  {id:'community', emoji:'🌱', label:'Serve the Island', short:'Trust and impact', text:'Build respect through integrity, relationships, faith, and community work.'}
+];
+
+export const THEME_MODES = [
+  {id:'sleek', emoji:'🌙', label:'Dark & Sleek', text:'A focused life-sim look with deeper contrast and cleaner panels.'},
+  {id:'island', emoji:'🌴', label:'Island Color', text:'A brighter Caribbean feel with warmer colors and more festival energy.'}
+];
+
+export const AVATARS = [
+  {id:'youth_neutral', emoji:'🧑🏾', label:'Island Youth'},
+  {id:'young_woman', emoji:'👩🏾', label:'Young Woman'},
+  {id:'young_man', emoji:'👨🏾', label:'Young Man'},
+  {id:'bright_smile', emoji:'😊', label:'Bright Smile'},
+  {id:'cool_style', emoji:'😎', label:'Cool Style'},
+  {id:'dreamer', emoji:'🙂', label:'Dreamer'}
+];
+
 const FIRST_F = {
   jamaica:['Kezia','Alicia','Stacy-Ann','Nadine','Simone','Tricia','Marcia','Shenelle','Kadesha','Renae'],
   trinidad:['Priya','Alana','Candice','Nadia','Sasha','Aisha','Rowena','Kezia','Tricia','Simone'],

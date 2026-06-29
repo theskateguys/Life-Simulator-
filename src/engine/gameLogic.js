@@ -46,7 +46,7 @@ export function defaultSkills(bonus = {}) {
   };
 }
 
-export function createInitialGame({ islandId, backgroundId, name, preference }) {
+export function createInitialGame({ islandId, backgroundId, name, preference, goalId = 'own_path', themeMode = 'sleek', avatarId = 'youth_neutral' }) {
   const island = islandById(islandId);
   const background = backgroundById(backgroundId);
   const bonus = island.bonus || {};
@@ -56,6 +56,9 @@ export function createInitialGame({ islandId, backgroundId, name, preference }) 
     backgroundId,
     name:name.trim() || generateName('m', islandId),
     preference:preference || 'any',
+    goalId,
+    themeMode,
+    avatarId,
     generation:1,
     age:18,
     stats:{
