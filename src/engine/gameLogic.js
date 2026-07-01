@@ -596,8 +596,15 @@ function applyEventSpecial(game, choice) {
   return refreshFinance(next);
 }
 
+function eventChoiceChanges(choice) {
+  const changes = {...(choice.changes || {})};
+  if (choice.fame) changes.fame = (changes.fame || 0) + choice.fame;
+  return changes;
+}
+
 export function applyEventChoice(game, event, choice) {
-  let next = applyChanges(game, choice.changes);
+  const changes = eventChoiceChanges(choice);
+  let next = applyChanges(game, changes);
   next = applyEventSpecial(next, choice);
   next = record(next, {id:`event:${event.id}`,label:event.title,emoji:event.icon,cost:0}, {isEvent:true});
   next = addFlag(next, `event:${event.id}`);
@@ -606,7 +613,7 @@ export function applyEventChoice(game, event, choice) {
   const death = evaluateDeath(next);
   return {
     game:next,
-    outcome:{title:event.title, icon:event.icon, accent:event.accent, text:choice.result || 'Your decision changed the direction of the story.', changes:choice.changes || {}, achievements:awarded.newOnes, endAfter:next.yearFocus >= YEAR_FOCUS},
+    outcome:{title:event.title, icon:event.icon, accent:event.accent, text:choice.result || 'Your decision changed the direction of the story.', changes, achievements:awarded.newOnes, endAfter:next.yearFocus >= YEAR_FOCUS},
     death
   };
 }

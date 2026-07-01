@@ -152,7 +152,11 @@ export function OutcomeModal({outcome, onContinue, fmt}) {
         <div style={{display:'flex',flexWrap:'wrap',gap:5,marginBottom:12}}>
           {changes.map(([key,value])=>{
             const positive = value > 0;
-            const label = key === 'cash' ? `${positive?'+':'-'}${fmt(Math.abs(value))}` : `${positive?'+':''}${value} ${key}`;
+            const label = key === 'cash'
+              ? `${positive?'+':'-'}${fmt(Math.abs(value))}`
+              : key === 'fame'
+                ? `${positive?'+':''}${value} followers`
+                : `${positive?'+':''}${value} ${key}`;
             return (
               <span key={key} style={{fontSize:10,fontWeight:800,color:positive?C.green:C.coral,background:positive?`${C.green}16`:`${C.coral}16`,border:`1px solid ${positive?C.green:C.coral}35`,borderRadius:8,padding:'4px 7px'}}>
                 {label}

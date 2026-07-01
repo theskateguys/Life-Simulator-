@@ -21,7 +21,7 @@ export const ISLANDS = [
     propertyPrice:105000, rentalIncome:640, stormRisk:0.05, festival:'Carnival',
     unique:{title:'Carnival Contract', icon:'🎭', story:'A band needs dependable people to coordinate a section and content around the road experience.', choices:[
       {label:'🎭 Build the Carnival project', result:'The season was hectic, but the network and visibility were real.', changes:{cash:1400,creative:8,communityStanding:12,stress:8}, fame:900},
-      {label:'🧭 Keep your year structured', result:'You avoided a month that could have swallowed the rest of your goals.', changes:{stress:-8,finance:5}}
+      {label:'🧭 Keep your year structured', result:'You avoided a month that could have swallowed the rest of your goals.', changes:{stress:-8,intelligence:5}}
     ]}
   },
   {
@@ -780,7 +780,7 @@ export const RANDOM_LIFE_EVENTS = [
     title:'Costume Price Pressure', icon:'💸', category:'FINANCE', accent:C.gold,
     story:'The costume you wanted is beautiful and expensive. Friends say memories matter. Your budget says rent also matters.',
     choices:[
-      {label:'Choose a cheaper section', result:'You still felt the road and avoided months of financial regret.', changes:{cash:-450,happiness:14,finance:6,stress:-4}},
+      {label:'Choose a cheaper section', result:'You still felt the road and avoided months of financial regret.', changes:{cash:-450,happiness:14,intelligence:6,stress:-4}},
       {label:'Swipe the card anyway', result:'The pictures looked incredible. The balance followed you home.', changes:{cash:-1800,happiness:24,stress:18,integrity:-4}},
       {label:'Volunteer with the band', result:'You traded glamour for access, work, and a new behind-the-scenes network.', changes:{cash:250,relationships:12,workEthic:8,stress:8}}
     ]
