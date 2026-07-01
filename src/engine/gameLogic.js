@@ -1,6 +1,6 @@
 import {
   ACHIEVEMENTS, ACTION_CATEGORIES, BACKGROUNDS, BRAND_DEALS, BUSINESS_ACTIONS, CAREERS, CONTEXT_EVENTS,
-  FAME_LEVELS, ISLANDS, PROPERTY_ACTIONS, PROVERBS, SKILLS, generateName
+  FAME_LEVELS, ISLANDS, PROPERTY_ACTIONS, PROVERBS, RANDOM_LIFE_EVENTS, SKILLS, generateName
 } from '../data/gameData.js';
 
 export const YEAR_FOCUS = 10;
@@ -404,17 +404,41 @@ export function canUseAction(game, action) {
   return {ok:true, lines:[]};
 }
 
+function eventRequirementsMet(game, event) {
+  if (event.minAge && game.age < event.minAge) return false;
+  if (event.maxAge && game.age > event.maxAge) return false;
+  if (event.islands?.length && !event.islands.includes(game.islandId)) return false;
+  if (event.goalIds?.length && !event.goalIds.includes(game.goalId)) return false;
+  if (event.req?.business && !game.business.active) return false;
+  if (event.req?.property && game.properties.length < 1) return false;
+  if (event.req?.children && game.children.length < event.req.children) return false;
+  if (event.req?.addiction && Object.values(game.addictions).every(v => v < 20)) return false;
+  if (event.req?.partner && !game.partner) return false;
+  if (event.req?.career && game.career === 'none') return false;
+  if (event.req?.migration && !game.migration) return false;
+  if (event.req?.noMigration && game.migration) return false;
+  if (event.req?.followers && game.followers < event.req.followers) return false;
+  if (event.req?.stressHigh && game.stats.stress < event.req.stressHigh) return false;
+  if (event.req?.healthLow && game.stats.health > event.req.healthLow) return false;
+  return true;
+}
+
 function currentContextEvent(game) {
   const counts = game.yearLog.reduce((acc, entry) => ({...acc,[entry.id]:(acc[entry.id] || 0) + 1}), {});
   const eligible = CONTEXT_EVENTS.filter(event => {
     if (game.flags.includes(`event:${event.id}`)) return false;
-    if (event.req?.business && !game.business.active) return false;
-    if (event.req?.property && game.properties.length < 1) return false;
-    if (event.req?.children && game.children.length < event.req.children) return false;
-    if (event.req?.addiction && Object.values(game.addictions).every(v => v < 20)) return false;
+    if (!eventRequirementsMet(game, event)) return false;
     const overlap = (event.tags || []).reduce((sum, tag) => sum + (counts[tag] || 0), 0);
     return overlap >= (event.min || 1);
   });
+  if (!eligible.length) return null;
+  return pick(eligible);
+}
+
+function randomLifeEvent(game) {
+  const eligible = RANDOM_LIFE_EVENTS.filter(event => (
+    !game.flags.includes(`event:${event.id}`) && eventRequirementsMet(game, event)
+  ));
   if (!eligible.length) return null;
   return pick(eligible);
 }
@@ -477,6 +501,9 @@ export function staticEvent(game) {
         {label:'🚗 Finance something to match', result:'The image was immediate. The payment was not.', changes:{cash:-4000,stress:22,integrity:-8}, special:'add_loan_11000'}
       ]
     };
+  }
+  if (game.age >= 18 && game.yearFocus > 0 && game.yearFocus < YEAR_FOCUS && Math.random() < 0.14) {
+    return randomLifeEvent(game);
   }
   return null;
 }

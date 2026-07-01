@@ -107,6 +107,84 @@ const CATEGORY_STORIES = {
   property:{promise:'Manage assets that can change your long-term life.', vibe:'Asset chapter'}
 };
 
+const ISLAND_UI_THEMES = {
+  jamaica:{primary:'#FFD60A', secondary:'#2FD66B', deep:'#07140B', soft:'#10321A', mood:'stage lights and mountain night'},
+  trinidad:{primary:'#FF4D5A', secondary:'#FFD166', deep:'#15070B', soft:'#2B0F16', mood:'Carnival pulse and city ambition'},
+  barbados:{primary:'#2F80FF', secondary:'#FFD34A', deep:'#061527', soft:'#0B2A4C', mood:'blue water and Crop Over gold'},
+  dominican:{primary:'#377DFF', secondary:'#FF4E5B', deep:'#07152A', soft:'#102852', mood:'bright coast and family heat'},
+  stlucia:{primary:'#59D7FF', secondary:'#FFE56A', deep:'#052331', soft:'#0B3B43', mood:'Pitons, jazz, and warm rain'},
+  custom:{primary:'#1BCFC9', secondary:'#FFD60A', deep:'#05221F', soft:'#0A3832', mood:'your island, your rules'}
+};
+
+function islandTheme(islandId) {
+  return ISLAND_UI_THEMES[islandId] || ISLAND_UI_THEMES.custom;
+}
+
+function statTone(key, value) {
+  if (key === 'stress') return value > 65 ? C.coral : value > 35 ? C.gold : C.green;
+  return value > 60 ? C.green : value > 30 ? C.gold : C.coral;
+}
+
+function storyMood(game, island, goal) {
+  const firstName = (game.name || 'You').split(' ')[0];
+  if (game.stats.health < 28) return {
+    title:'The Body Is Asking First',
+    text:`${firstName} can still chase the dream, but health has moved to the front of the story in ${island.name}.`
+  };
+  if (game.stats.stress > 74) return {
+    title:'Pressure Is Building',
+    text:`The year is moving fast. Every choice now needs to protect energy as much as ambition.`
+  };
+  if (game.followers > 50000) return {
+    title:'Everybody Is Watching',
+    text:`The audience is real now. Fame can open doors, but reputation decides which ones stay open.`
+  };
+  if (game.business.active) return {
+    title:'Owner Mode',
+    text:`The business is no longer just an idea. This chapter is about systems, trust, and cash flow.`
+  };
+  if (game.properties.length > 0) return {
+    title:'Roots and Assets',
+    text:`Ownership changed the rhythm. ${firstName} is building something the island can see.`
+  };
+  return {
+    title:`${goal.label} in Motion`,
+    text:`Age ${game.age} is another chapter in ${island.name}. Spend focus where you want the story to grow.`
+  };
+}
+
+function goalCategoryOrder(goalId) {
+  const map = {
+    wealth:['money','career','hustle'],
+    family:['life','health','money'],
+    fame:['hustle','life','career'],
+    business:['hustle','business','money'],
+    community:['life','career','health'],
+    own_path:['life','career','money']
+  };
+  return map[goalId] || map.own_path;
+}
+
+function recommendedCategories(categories, game) {
+  const preferred = goalCategoryOrder(game.goalId);
+  const unlocked = categories.filter(category => !category.categoryLocked);
+  const urgent = [];
+  if (game.stats.health < 45 || game.stats.stress > 65) urgent.push('health');
+  if (game.finance.cash < game.finance.emergencyFundTarget * 0.25) urgent.push('money');
+  if (game.partner || game.children.length) urgent.push('life');
+  const order = [...urgent, ...preferred, ...unlocked.map(category => category.id)];
+  const seen = new Set();
+  return order
+    .map(id => unlocked.find(category => category.id === id))
+    .filter(Boolean)
+    .filter(category => {
+      if (seen.has(category.id)) return false;
+      seen.add(category.id);
+      return true;
+    })
+    .slice(0, 3);
+}
+
 export default function App() {
   const [screen,setScreen] = useState(screens.title);
   const [selectedIsland,setSelectedIsland] = useState(null);
@@ -326,62 +404,122 @@ export default function App() {
     const career = CAREERS[game.career] || CAREERS.none;
     const monthlyNet = finance.monthlyIncome - finance.monthlyExpenses;
     const signedMoney = value => `${value >= 0 ? '+' : '-'}${money(Math.abs(value))}`;
+    const theme = islandTheme(game.islandId);
+    const mood = storyMood(game,island,activeGoal);
+    const recommended = recommendedCategories(categories, game);
+    const recentLog = game.yearLog.slice(-5);
     const statRows = [
       ['😊','Joy','happiness',C.gold],['❤️','Health','health',C.coral],['🧠','Stress','stress',C.violet],['🤝','Social','relationships',C.turquoise],
       ['📚','Mind','intelligence',C.turquoise],['💪','Drive','workEthic',C.orange],['🌱','Community','communityStanding',C.green],['⚖️','Integrity','integrity',C.gold]
     ];
-    return <div style={{minHeight:'100vh',background:activeBackground,color:C.text}}>
+    const signalRows = [
+      ['💰','Cash',money(finance.cash),finance.cash>2000?C.green:C.gold],
+      ['😊','Joy',Math.round(game.stats.happiness),statTone('happiness',game.stats.happiness)],
+      ['❤️','Health',Math.round(game.stats.health),statTone('health',game.stats.health)],
+      ['🧠','Stress',Math.round(game.stats.stress),statTone('stress',game.stats.stress)]
+    ];
+    return <div className="story-shell" style={{'--island-primary':theme.primary,'--island-secondary':theme.secondary,'--island-deep':theme.deep,'--island-soft':theme.soft}}>
       <Toast text={toast}/>
-      <div style={{maxWidth:540,margin:'0 auto',padding:'13px 14px 54px'}}>
-        <Card style={{padding:'13px 14px',borderColor:`${C.gold}32`,marginBottom:11}}>
-          <div style={{display:'flex',gap:12,alignItems:'center',marginBottom:10}}>
-            <div style={{width:54,height:54,borderRadius:16,display:'grid',placeItems:'center',fontSize:34,background:`${C.gold}16`,border:`1px solid ${C.gold}35`}}>{activeAvatar.emoji}</div>
-            <div style={{flex:1,minWidth:0}}>
-              <p style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:1.4,margin:'0 0 3px'}}>AGE {game.age} · {island.name.toUpperCase()}</p>
-              <h2 style={{fontSize:22,lineHeight:1.05,margin:'0 0 4px'}}>{game.name}</h2>
-              <p style={{fontSize:11,color:C.dim,margin:0}}>{activeGoal.emoji} {activeGoal.label} · {career.emoji} {career.label}{game.careerLevel>0?` Lv${game.careerLevel}`:''}</p>
+      <div className="story-wrap soft-scroll">
+        <section className="story-hero">
+          <div style={{position:'relative',zIndex:1}}>
+            <div style={{display:'flex',gap:13,alignItems:'center',marginBottom:12}}>
+              <div className="avatar-orb">{activeAvatar.emoji}<span className="flag-chip">{island.flag}</span></div>
+              <div style={{flex:1,minWidth:0}}>
+                <p style={{fontSize:10,color:theme.primary,fontWeight:900,letterSpacing:1.7,textTransform:'uppercase',margin:'0 0 4px'}}>Age {game.age} · {island.name}</p>
+                <h1 style={{fontSize:27,lineHeight:1.02,margin:'0 0 5px'}}>{mood.title}</h1>
+                <p style={{fontSize:11,color:C.dim,margin:0}}>{game.name} · {activeGoal.emoji} {activeGoal.label}</p>
+              </div>
             </div>
-            <div style={{textAlign:'right'}}>
-              <p style={{fontSize:9,color:C.faint,margin:'0 0 2px'}}>Cash</p>
-              <p style={{fontSize:17,color:finance.cash>2000?C.green:C.gold,fontWeight:900,margin:0}}>{money(finance.cash)}</p>
-              <p style={{fontSize:9,color:monthlyNet>=0?C.green:C.coral,margin:'2px 0 0'}}>{signedMoney(monthlyNet)}/mo</p>
+            <p style={{fontSize:13,color:C.muted,lineHeight:1.65,margin:'0 0 12px'}}>{mood.text}</p>
+            <div style={{display:'flex',gap:7,flexWrap:'wrap',marginBottom:12}}>
+              <span style={{fontSize:9,color:theme.primary,border:`1px solid ${theme.primary}44`,background:`${theme.primary}12`,padding:'4px 7px',borderRadius:999,fontWeight:900}}>{career.emoji} {career.label}{game.careerLevel>0?` Lv${game.careerLevel}`:''}</span>
+              <span style={{fontSize:9,color:theme.secondary,border:`1px solid ${theme.secondary}44`,background:`${theme.secondary}12`,padding:'4px 7px',borderRadius:999,fontWeight:900}}>{island.festival}</span>
+              {game.migration&&<span style={{fontSize:9,color:C.turquoise,border:`1px solid ${C.turquoise}44`,background:`${C.turquoise}12`,padding:'4px 7px',borderRadius:999,fontWeight:900}}>{game.migration.label}</span>}
+            </div>
+            <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-end',gap:12,marginBottom:7}}>
+              <div>
+                <p style={{fontSize:10,color:C.faint,letterSpacing:1.4,textTransform:'uppercase',fontWeight:900,margin:'0 0 2px'}}>Chapter energy</p>
+                <p style={{fontSize:12,color:C.muted,margin:0}}>{YEAR_FOCUS-game.yearFocus} focus left · {theme.mood}</p>
+              </div>
+              <p style={{fontSize:18,color:theme.primary,fontWeight:950,margin:0}}>{game.yearFocus}/{YEAR_FOCUS}</p>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:`repeat(${YEAR_FOCUS},1fr)`,gap:4,marginBottom:12}}>{Array.from({length:YEAR_FOCUS}).map((_,index)=><div key={index} className={`focus-pip ${index<game.yearFocus?'is-used':''}`} style={{background:index<game.yearFocus?`linear-gradient(90deg,${theme.primary},${theme.secondary})`:'rgba(255,255,255,0.11)',boxShadow:index<game.yearFocus?`0 0 10px ${theme.primary}66`:'none'}} />)}</div>
+            <div className="signal-grid">{signalRows.map(([emoji,label,value,color])=><div key={label} className="signal-card"><p style={{fontSize:8,color:C.faint,margin:'0 0 3px'}}>{emoji} {label}</p><p style={{fontSize:14,color,fontWeight:950,margin:0,overflowWrap:'anywhere'}}>{value}</p></div>)}</div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
+              <Button onClick={saveCurrent} secondary accent={theme.secondary}>Save</Button>
+              <Button disabled={game.yearFocus < YEAR_FOCUS} onClick={()=>finishYear(game)} accent={theme.primary}>{game.yearFocus<YEAR_FOCUS?`${YEAR_FOCUS-game.yearFocus} focus left`:'Wrap Up Age'}</Button>
             </div>
           </div>
-          <p style={{fontSize:11,color:C.muted,lineHeight:1.55,margin:'0 0 10px'}}>This year, choose how {game.name.split(' ')[0] || 'you'} spends time and energy. There is no single winning path; the story grows from the choices you make.</p>
-          <div style={{display:'flex',justifyContent:'space-between',alignItems:'center',marginBottom:7}}><div><p style={{fontWeight:900,color:C.gold,fontSize:13,margin:'0 0 1px'}}>Year Focus</p><p style={{fontSize:10,color:C.dim,margin:0}}>{YEAR_FOCUS-game.yearFocus} focus remaining</p></div><p style={{fontSize:11,fontWeight:900,color:C.gold,margin:0}}>{game.yearFocus}/{YEAR_FOCUS}</p></div>
-          <div style={{display:'grid',gridTemplateColumns:`repeat(${YEAR_FOCUS},1fr)`,gap:3}}>{Array.from({length:YEAR_FOCUS}).map((_,index)=><div key={index} style={{height:6,borderRadius:5,background:index<game.yearFocus?C.gold:'rgba(255,255,255,0.10)',boxShadow:index<game.yearFocus?`0 0 6px ${C.gold}55`:'none'}} />)}</div>
-          <div style={{display:'flex',gap:5,flexWrap:'wrap',marginTop:9}}>{game.business.active&&<span style={{fontSize:9,color:C.orange,border:`1px solid ${C.orange}32`,background:`${C.orange}12`,padding:'3px 6px',borderRadius:8}}>Business Lv {game.business.level}</span>}{game.properties.length>0&&<span style={{fontSize:9,color:C.teal,border:`1px solid ${C.teal}32`,background:`${C.teal}12`,padding:'3px 6px',borderRadius:8}}>{game.properties.length} propert{game.properties.length===1?'y':'ies'}</span>}{game.finance.loanDebt>0&&<span style={{fontSize:9,color:C.coral,border:`1px solid ${C.coral}32`,background:`${C.coral}12`,padding:'3px 6px',borderRadius:8}}>Loan {money(game.finance.loanDebt)}</span>}{game.finance.pardner.active&&<span style={{fontSize:9,color:C.green,border:`1px solid ${C.green}32`,background:`${C.green}12`,padding:'3px 6px',borderRadius:8}}>Pardner active</span>}</div>
-        </Card>
-        {game.stats.health<25 && <Card style={{padding:'9px 11px',borderColor:`${C.coral}40`,marginBottom:8}}><p style={{fontSize:11,color:C.coral,fontWeight:800,margin:0}}>⚠️ Health is critical. Your body needs immediate attention.</p></Card>}
-        {game.stats.stress>75 && <Card style={{padding:'9px 11px',borderColor:`${C.gold}40`,marginBottom:8}}><p style={{fontSize:11,color:C.gold,fontWeight:800,margin:0}}>⚠️ Stress is extreme. Recovery is a strategic decision now.</p></Card>}
-        {Object.values(game.addictions).some(value=>value>40) && <Card style={{padding:'9px 11px',borderColor:`${C.orange}40`,marginBottom:8}}><p style={{fontSize:11,color:C.orange,fontWeight:800,margin:0}}>⚠️ Vice pressure is active. Health actions and recovery choices now matter.</p></Card>}
+        </section>
+
+        {game.stats.health<25 && <div className="story-panel" style={{padding:'10px 12px',borderColor:`${C.coral}55`,marginTop:10}}><p style={{fontSize:11,color:C.coral,fontWeight:900,margin:0}}>Health is critical. Your body needs immediate attention.</p></div>}
+        {game.stats.stress>75 && <div className="story-panel" style={{padding:'10px 12px',borderColor:`${C.gold}55`,marginTop:10}}><p style={{fontSize:11,color:C.gold,fontWeight:900,margin:0}}>Stress is extreme. Recovery is a strategic decision now.</p></div>}
+        {Object.values(game.addictions).some(value=>value>40) && <div className="story-panel" style={{padding:'10px 12px',borderColor:`${C.orange}55`,marginTop:10}}><p style={{fontSize:11,color:C.orange,fontWeight:900,margin:0}}>Vice pressure is active. Health and recovery choices now matter.</p></div>}
 
         {!selected ? <>
-          <p style={{fontSize:10,letterSpacing:2,color:C.dim,fontWeight:900,margin:'0 0 8px'}}>CHOOSE THIS YEAR'S CHAPTER</p>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8,marginBottom:11}}>{categories.map(category=>{
-            const story = CATEGORY_STORIES[category.id] || {promise:category.tag, vibe:'Life chapter'};
-            return <button key={category.id} onClick={()=>setSelectedCategory(category.id)} style={{cursor:'pointer',textAlign:'left',padding:'12px',borderRadius:14,border:`1px solid ${category.categoryLocked?'rgba(255,255,255,.15)':category.color+'55'}`,background:category.categoryLocked?'rgba(255,255,255,.025)':`linear-gradient(160deg,${category.color}13,rgba(255,255,255,.035))`,color:C.text,opacity:category.categoryLocked?.65:1,boxShadow:category.categoryLocked?'none':`0 10px 26px ${category.color}0E`}}>
-              <div style={{display:'flex',justifyContent:'space-between',gap:8,alignItems:'flex-start',marginBottom:7}}><span style={{fontSize:23}}>{category.categoryLocked?'🔒':category.emoji}</span><span style={{fontSize:8,color:category.categoryLocked?C.faint:category.color,border:`1px solid ${category.categoryLocked?C.faint:category.color}33`,borderRadius:20,padding:'2px 6px',fontWeight:900,textTransform:'uppercase'}}>{category.categoryLocked?'Locked':story.vibe}</span></div>
-              <p style={{fontWeight:900,fontSize:13,color:category.categoryLocked?C.dim:category.color,margin:'0 0 3px'}}>{category.label}</p>
-              <p style={{fontSize:10,color:C.muted,lineHeight:1.4,margin:'0 0 6px'}}>{category.categoryLocked?category.categoryLock:story.promise}</p>
-              <p style={{fontSize:9,color:C.faint,fontWeight:800,margin:0}}>{category.items.length} choices inside →</p>
-            </button>;
-          })}</div>
-          {game.yearLog.length>0&&<Card style={{padding:'11px 12px',borderColor:`${C.violet}26`,marginBottom:8}}><p style={{fontSize:10,color:C.violet,fontWeight:900,letterSpacing:1.5,margin:'0 0 7px'}}>📋 THIS YEAR'S LOG</p>{game.yearLog.map((entry,index)=><div key={`${entry.id}-${index}`} style={{display:'flex',gap:8,alignItems:'center',marginBottom:5}}><span style={{fontSize:9,color:C.faint,minWidth:25}}>{entry.month}</span><span>{entry.emoji}</span><span style={{flex:1,fontSize:11,color:entry.isEvent?C.gold:C.muted,fontWeight:entry.isEvent?800:600}}>{entry.label}</span>{entry.cost>0&&<span style={{fontSize:9,color:C.gold}}>●{entry.cost}</span>}</div>)}</Card>}
-          <Card style={{padding:0,overflow:'hidden',marginBottom:7,borderColor:`${C.green}30`}}><button onClick={()=>setOpen(state=>({...state,stats:!state.stats}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'10px 12px',border:0,background:'transparent',color:C.green,fontWeight:900,fontSize:12}}>📊 Stats & Money <span style={{float:'right',color:C.faint}}>{open.stats?'▲':'▼'}</span></button>{open.stats&&<div style={{padding:'0 12px 12px'}}><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>{statRows.map(([emoji,label,key,accent])=>{const value=Math.round(game.stats[key]); const color=key==='stress' ? (value>65?C.coral:value>35?C.gold:C.green) : (value>60?C.green:value>30?C.gold:C.coral); return <div key={key} style={{background:`${accent}09`,border:`1px solid ${accent}1F`,borderRadius:9,padding:'7px 8px'}}><p style={{fontSize:9,color:C.dim,margin:'0 0 2px'}}>{emoji} {label}</p><p style={{fontSize:14,fontWeight:900,color,margin:'0 0 4px'}}>{value}</p><div style={{height:3,borderRadius:2,background:'rgba(255,255,255,.08)',overflow:'hidden'}}><div style={{height:3,width:`${value}%`,background:color}} /></div></div>})}</div><FinancePanel game={game} finance={finance} island={island} fmt={money}/></div>}</Card>
-          <Card style={{padding:0,overflow:'hidden',marginBottom:7,borderColor:`${C.turquoise}30`}}><button onClick={()=>setOpen(state=>({...state,skills:!state.skills}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'10px 12px',border:0,background:'transparent',color:C.turquoise,fontWeight:900,fontSize:12}}>🎯 Skills <span style={{float:'right',color:C.faint}}>{open.skills?'▲':'▼'}</span></button>{open.skills&&<div style={{padding:'0 12px 12px'}}>{SKILLS.map(skill=>{const value=game.skills[skill.id]||0; return <div key={skill.id} style={{margin:'8px 0'}}><div style={{display:'flex',justifyContent:'space-between',fontSize:10,marginBottom:3}}><span style={{color:C.muted}}>{skill.emoji} {skill.label}</span><span style={{color:skill.color,fontWeight:900}}>{value}{skillLabelText(skill.id,value)}</span></div><div style={{height:4,borderRadius:3,background:'rgba(255,255,255,.07)',overflow:'hidden'}}><div style={{height:4,width:`${value}%`,background:skill.color}} /></div></div>})}</div>}</Card>
-          <Card style={{padding:0,overflow:'hidden',marginBottom:7,borderColor:`${C.pink}30`}}><button onClick={()=>setOpen(state=>({...state,family:!state.family}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'10px 12px',border:0,background:'transparent',color:C.pink,fontWeight:900,fontSize:12}}>👨‍👩‍👧 Family · {familyHeadline} <span style={{float:'right',color:C.faint}}>{open.family?'▲':'▼'}</span></button>{open.family&&<div style={{padding:'0 12px 12px'}}><FamilyPanel game={game}/></div>}</Card>
-          <Card style={{padding:0,overflow:'hidden',marginBottom:10,borderColor:`${C.gold}30`}}><button onClick={()=>setOpen(state=>({...state,achievements:!state.achievements}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'10px 12px',border:0,background:'transparent',color:C.gold,fontWeight:900,fontSize:12}}>🏆 Achievements · {achievementItems.length}/{ACHIEVEMENTS.length} <span style={{float:'right',color:C.faint}}>{open.achievements?'▲':'▼'}</span></button>{open.achievements&&<div style={{padding:'0 12px 12px'}}>{ACHIEVEMENTS.map(item=>{const unlocked=game.achievements.includes(item.id); return <div key={item.id} style={{padding:'6px 0',display:'flex',gap:7,opacity:unlocked?1:.4}}><span>{item.emoji}</span><div><p style={{fontSize:11,fontWeight:800,color:unlocked?C.gold:C.dim,margin:0}}>{item.title}</p><p style={{fontSize:9,color:C.faint,margin:'1px 0 0'}}>{item.text}</p></div></div>})}</div>}</Card>
-          <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}><Button onClick={saveCurrent} secondary accent={C.green}>💾 Save Game</Button><Button disabled={game.yearFocus < YEAR_FOCUS} onClick={()=>finishYear(game)} accent={C.gold}>{game.yearFocus<YEAR_FOCUS?`${YEAR_FOCUS-game.yearFocus} focus left`:'Wrap Up Age 📋'}</Button></div>
+          <section style={{marginTop:15}}>
+            <div style={{display:'flex',justifyContent:'space-between',gap:12,alignItems:'flex-end',marginBottom:8}}>
+              <div>
+                <p style={{fontSize:10,letterSpacing:1.8,color:theme.primary,fontWeight:900,textTransform:'uppercase',margin:'0 0 3px'}}>Suggested next moves</p>
+                <p style={{fontSize:11,color:C.dim,margin:0}}>Based on your goal, pressure, and current chapter.</p>
+              </div>
+            </div>
+            <div style={{display:'grid',gridTemplateColumns:'1fr',gap:8,marginBottom:14}}>{recommended.map(category=>{
+              const story = CATEGORY_STORIES[category.id] || {promise:category.tag, vibe:'Life chapter'};
+              return <button key={category.id} className="chapter-card choice-lift" onClick={()=>setSelectedCategory(category.id)} style={{cursor:'pointer',textAlign:'left',padding:'12px 13px',border:`1px solid ${category.color}62`,background:`linear-gradient(135deg,${category.color}18,rgba(255,255,255,.05))`,color:C.text,boxShadow:`0 14px 32px ${category.color}12`}}>
+                <div style={{display:'flex',alignItems:'center',gap:10}}>
+                  <span style={{fontSize:25}}>{category.emoji}</span>
+                  <div style={{flex:1,minWidth:0}}>
+                    <p style={{fontSize:9,color:category.color,fontWeight:900,letterSpacing:1.2,textTransform:'uppercase',margin:'0 0 2px'}}>{story.vibe}</p>
+                    <p style={{fontSize:14,fontWeight:950,margin:'0 0 2px'}}>{category.label}</p>
+                    <p style={{fontSize:10,color:C.muted,lineHeight:1.35,margin:0}}>{story.promise}</p>
+                  </div>
+                  <span style={{fontSize:16,color:category.color}}>→</span>
+                </div>
+              </button>;
+            })}</div>
+          </section>
+
+          <section>
+            <p style={{fontSize:10,letterSpacing:1.8,color:C.dim,fontWeight:900,textTransform:'uppercase',margin:'0 0 8px'}}>Choose this chapter</p>
+            <div className="chapter-grid" style={{marginBottom:14}}>{categories.map(category=>{
+              const story = CATEGORY_STORIES[category.id] || {promise:category.tag, vibe:'Life chapter'};
+              return <button key={category.id} className="chapter-card choice-lift" onClick={()=>!category.categoryLocked && setSelectedCategory(category.id)} disabled={category.categoryLocked} style={{cursor:category.categoryLocked?'not-allowed':'pointer',textAlign:'left',padding:'12px',border:`1px solid ${category.categoryLocked?'rgba(255,255,255,.14)':category.color+'55'}`,background:category.categoryLocked?'rgba(255,255,255,.025)':`linear-gradient(160deg,${category.color}12,rgba(255,255,255,.04))`,color:C.text,opacity:category.categoryLocked?0.55:1}}>
+                <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:7}}>
+                  <span style={{fontSize:24}}>{category.categoryLocked?'🔒':category.emoji}</span>
+                  <span style={{fontSize:8,color:category.categoryLocked?C.faint:category.color,border:`1px solid ${category.categoryLocked?C.faint:category.color}33`,borderRadius:20,padding:'2px 6px',fontWeight:900,textTransform:'uppercase'}}>{category.categoryLocked?'Locked':story.vibe}</span>
+                </div>
+                <p style={{fontWeight:950,fontSize:13,color:category.categoryLocked?C.dim:category.color,margin:'0 0 4px'}}>{category.label}</p>
+                <p style={{fontSize:10,color:C.muted,lineHeight:1.38,margin:'0 0 7px'}}>{category.categoryLocked?category.categoryLock:story.promise}</p>
+                <p style={{fontSize:9,color:C.faint,fontWeight:800,margin:0}}>{category.items.length} choices</p>
+              </button>;
+            })}</div>
+          </section>
+
+          <section className="story-panel" style={{padding:'12px 13px',marginBottom:9,borderColor:`${theme.primary}33`}}>
+            <p style={{fontSize:10,color:theme.primary,fontWeight:900,letterSpacing:1.5,textTransform:'uppercase',margin:'0 0 8px'}}>Story so far</p>
+            {recentLog.length ? recentLog.map((entry,index)=><div key={`${entry.id}-${index}`} style={{display:'flex',gap:9,alignItems:'center',padding:'5px 0'}}>
+              <span style={{fontSize:9,color:C.faint,minWidth:24}}>{entry.month}</span>
+              <span style={{fontSize:17}}>{entry.emoji}</span>
+              <span style={{flex:1,fontSize:11,color:entry.isEvent?theme.primary:C.muted,fontWeight:entry.isEvent?900:650}}>{entry.label}</span>
+              {entry.cost>0&&<span style={{fontSize:9,color:theme.secondary,fontWeight:900}}>-{entry.cost}</span>}
+            </div>) : <p style={{fontSize:11,color:C.dim,lineHeight:1.5,margin:0}}>No choices yet this age. Pick the first chapter and let the year start moving.</p>}
+          </section>
+
+          <div className="story-panel" style={{marginBottom:8,borderColor:`${C.green}30`}}><button onClick={()=>setOpen(state=>({...state,stats:!state.stats}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'11px 12px',border:0,background:'transparent',color:C.green,fontWeight:900,fontSize:12}}>Stats & Money <span style={{float:'right',color:C.faint}}>{open.stats?'▲':'▼'}</span></button>{open.stats&&<div style={{padding:'0 12px 12px'}}><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>{statRows.map(([emoji,label,key,accent])=>{const value=Math.round(game.stats[key]); const color=statTone(key,value); return <div key={key} style={{background:`${accent}09`,border:`1px solid ${accent}1F`,borderRadius:9,padding:'7px 8px'}}><p style={{fontSize:9,color:C.dim,margin:'0 0 2px'}}>{emoji} {label}</p><p style={{fontSize:14,fontWeight:900,color,margin:'0 0 4px'}}>{value}</p><div style={{height:3,borderRadius:2,background:'rgba(255,255,255,.08)',overflow:'hidden'}}><div style={{height:3,width:`${value}%`,background:color}} /></div></div>})}</div><FinancePanel game={game} finance={finance} island={island} fmt={money}/></div>}</div>
+          <div className="story-panel" style={{marginBottom:8,borderColor:`${C.turquoise}30`}}><button onClick={()=>setOpen(state=>({...state,skills:!state.skills}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'11px 12px',border:0,background:'transparent',color:C.turquoise,fontWeight:900,fontSize:12}}>Skills <span style={{float:'right',color:C.faint}}>{open.skills?'▲':'▼'}</span></button>{open.skills&&<div style={{padding:'0 12px 12px'}}>{SKILLS.map(skill=>{const value=game.skills[skill.id]||0; return <div key={skill.id} style={{margin:'8px 0'}}><div style={{display:'flex',justifyContent:'space-between',fontSize:10,marginBottom:3}}><span style={{color:C.muted}}>{skill.emoji} {skill.label}</span><span style={{color:skill.color,fontWeight:900}}>{value}{skillLabelText(skill.id,value)}</span></div><div style={{height:4,borderRadius:3,background:'rgba(255,255,255,.07)',overflow:'hidden'}}><div style={{height:4,width:`${value}%`,background:skill.color}} /></div></div>})}</div>}</div>
+          <div className="story-panel" style={{marginBottom:8,borderColor:`${C.pink}30`}}><button onClick={()=>setOpen(state=>({...state,family:!state.family}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'11px 12px',border:0,background:'transparent',color:C.pink,fontWeight:900,fontSize:12}}>Family · {familyHeadline} <span style={{float:'right',color:C.faint}}>{open.family?'▲':'▼'}</span></button>{open.family&&<div style={{padding:'0 12px 12px'}}><FamilyPanel game={game}/></div>}</div>
+          <div className="story-panel" style={{marginBottom:10,borderColor:`${C.gold}30`}}><button onClick={()=>setOpen(state=>({...state,achievements:!state.achievements}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'11px 12px',border:0,background:'transparent',color:C.gold,fontWeight:900,fontSize:12}}>Achievements · {achievementItems.length}/{ACHIEVEMENTS.length} <span style={{float:'right',color:C.faint}}>{open.achievements?'▲':'▼'}</span></button>{open.achievements&&<div style={{padding:'0 12px 12px'}}>{ACHIEVEMENTS.map(item=>{const unlocked=game.achievements.includes(item.id); return <div key={item.id} style={{padding:'6px 0',display:'flex',gap:7,opacity:unlocked?1:.4}}><span>{item.emoji}</span><div><p style={{fontSize:11,fontWeight:800,color:unlocked?C.gold:C.dim,margin:0}}>{item.title}</p><p style={{fontSize:9,color:C.faint,margin:'1px 0 0'}}>{item.text}</p></div></div>})}</div>}</div>
         </> : <>
-          <button onClick={()=>setSelectedCategory(null)} style={{cursor:'pointer',border:`1px solid ${selected.color}50`,background:`${selected.color}12`,color:selected.color,padding:'7px 10px',borderRadius:9,fontWeight:900,fontSize:11,marginBottom:9}}>← Back to chapters</button>
-          <Card style={{padding:'13px 14px',marginBottom:10,borderColor:`${selected.color}35`}}>
-            <p style={{fontSize:10,color:selected.color,fontWeight:900,letterSpacing:1.4,textTransform:'uppercase',margin:'0 0 4px'}}>{CATEGORY_STORIES[selected.id]?.vibe || 'Life chapter'}</p>
-            <p style={{fontWeight:900,fontSize:18,color:selected.color,margin:'0 0 4px'}}>{selected.emoji} {selected.label}</p>
-            <p style={{fontSize:11,color:C.muted,lineHeight:1.55,margin:'0 0 8px'}}>{selected.categoryLocked?selected.categoryLock:(CATEGORY_STORIES[selected.id]?.promise || selected.tag)}</p>
-            <p style={{fontSize:10,color:C.faint,margin:0}}>Pick one choice to spend focus and create a story moment.</p>
-          </Card>
-          <div style={{display:'flex',flexDirection:'column',gap:8}}>{selected.items.map(action=>{
+          <button onClick={()=>setSelectedCategory(null)} className="choice-lift" style={{cursor:'pointer',border:`1px solid ${selected.color}55`,background:`${selected.color}14`,color:selected.color,padding:'8px 11px',borderRadius:999,fontWeight:900,fontSize:11,margin:'14px 0 10px'}}>← Back to chapter map</button>
+          <section className="story-panel" style={{padding:'14px',marginBottom:10,borderColor:`${selected.color}42`,background:`linear-gradient(150deg,${selected.color}12,rgba(255,255,255,.045))`}}>
+            <p style={{fontSize:10,color:selected.color,fontWeight:900,letterSpacing:1.4,textTransform:'uppercase',margin:'0 0 5px'}}>{CATEGORY_STORIES[selected.id]?.vibe || 'Life chapter'}</p>
+            <h2 style={{fontWeight:950,fontSize:22,lineHeight:1.05,color:selected.color,margin:'0 0 7px'}}>{selected.emoji} {selected.label}</h2>
+            <p style={{fontSize:12,color:C.muted,lineHeight:1.6,margin:'0 0 8px'}}>{selected.categoryLocked?selected.categoryLock:(CATEGORY_STORIES[selected.id]?.promise || selected.tag)}</p>
+            <p style={{fontSize:10,color:C.faint,margin:0}}>Pick a response. The outcome becomes part of this year’s story log.</p>
+          </section>
+          <div style={{display:'flex',flexDirection:'column',gap:9}}>{selected.items.map(action=>{
             let status = canUseAction(game,action);
             if (selected.categoryLocked) status = {ok:false,lines:[selected.categoryLock]};
             return <ActionCard key={action.id} action={action} color={selected.color} status={status} onChoose={chooseAction} fmt={money}/>;

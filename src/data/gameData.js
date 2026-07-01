@@ -581,6 +581,313 @@ export const CONTEXT_EVENTS = [
 
 ];
 
+export const RANDOM_LIFE_EVENTS = [
+  {
+    id:'carnival_band_call', islands:['trinidad'], minAge:18, sev:'CULTURE',
+    title:'Carnival Band Call', icon:'🎭', category:'CULTURE', accent:C.orange,
+    story:'A band leader calls two weeks before Carnival. A section needs help with costume pickup, content, and keeping people calm on the road. It could be fun, messy, visible, and exhausting.',
+    tip:'Carnival can be joy, business, reputation, and stress in the same weekend.',
+    choices:[
+      {label:'Build the section properly', result:'The road was chaos, but you handled it. People remembered your face, your energy, and your reliability.', changes:{cash:900,happiness:22,creative:8,communityStanding:12,stress:10,fame:900}},
+      {label:'Work the food and cooler lane', result:'You skipped the spotlight and made the weekend pay. Small profit, strong contacts, tired feet.', changes:{cash:1500,relationships:8,communityStanding:8,stress:12}},
+      {label:'Rest and watch from home', result:'You protected your peace. The timeline was loud, but your body thanked you the next morning.', changes:{health:8,stress:-16,happiness:-3}}
+    ]
+  },
+  {
+    id:'crop_over_pop_up', islands:['barbados'], minAge:18, sev:'CULTURE',
+    title:'Crop Over Pop-Up', icon:'🌾', category:'CULTURE', accent:C.gold,
+    story:'Crop Over season opens a small vendor spot near a busy route. It is short notice, high traffic, and everyone is looking for food, drinks, outfits, and a good story.',
+    choices:[
+      {label:'Run the pop-up', result:'The stall was packed by sunset. The money was good and the brand felt real for the first time.', changes:{cash:1700,communityStanding:10,workEthic:8,stress:12}},
+      {label:'Help a friend instead', result:'You made less money, but the friendship got stronger and the season felt lighter.', changes:{cash:550,relationships:16,happiness:12,stress:4}},
+      {label:'Just enjoy the season', result:'You spent money, laughed hard, and came back lighter.', changes:{cash:-350,happiness:24,stress:-12,relationships:8}}
+    ]
+  },
+  {
+    id:'reggae_sumfest_link', islands:['jamaica'], minAge:18, sev:'FAME',
+    title:'Backstage at Sumfest', icon:'🎤', category:'FAME', accent:C.violet,
+    story:'A cousin of a cousin can get you close to the backstage area at Reggae Sumfest. Not VIP exactly. More like close enough to either embarrass yourself or create a moment.',
+    choices:[
+      {label:'Capture clean content', result:'You posted short, respectful clips and a thoughtful caption. The algorithm liked the island energy.', changes:{fame:3200,creative:10,happiness:12,stress:5}},
+      {label:'Network quietly', result:'No big viral moment, but two real contacts saved your number.', changes:{relationships:14,communityStanding:8,intelligence:6}},
+      {label:'Party too hard', result:'The night was sweet. The next week was not. A few people saw more than you meant to show.', changes:{happiness:14,health:-9,stress:10,integrity:-6}, special:'addiction_up'}
+    ]
+  },
+  {
+    id:'jazz_festival_guest', islands:['stlucia'], minAge:18, sev:'CULTURE',
+    title:'Jazz Festival Guest List', icon:'🎷', category:'CULTURE', accent:C.teal,
+    story:'A hospitality contact offers two guest passes during Saint Lucia Jazz. The catch: you may need to host visitors and keep everything smooth.',
+    choices:[
+      {label:'Host like a professional', result:'Visitors left impressed. Your name travelled through a better network than expected.', changes:{cash:650,relationships:12,communityStanding:12,leadership:8,stress:8}},
+      {label:'Use it for creative content', result:'You turned the night into a polished island story and gained a small but excited audience.', changes:{fame:2200,creative:9,happiness:14,stress:5}},
+      {label:'Pass the tickets to family', result:'The family group chat was full of pictures. You missed the event but gained something warmer.', changes:{relationships:18,happiness:12,stress:-5}}
+    ]
+  },
+  {
+    id:'merengue_family_party', islands:['dominican'], minAge:18, sev:'RELATIONSHIP',
+    title:'Merengue Family Party', icon:'🎶', category:'RELATIONSHIP', accent:C.pink,
+    story:'A family party turns into a full neighbourhood evening. Music, aunties, cousins, advice you did not ask for, and one conversation that might change your year.',
+    choices:[
+      {label:'Stay present with family', result:'You danced, listened, and let people feel you close. The family bond got stronger.', changes:{relationships:20,happiness:18,stress:-10}},
+      {label:'Talk business with an uncle', result:'The conversation became practical fast. A small opportunity opened if you follow through.', changes:{cash:800,intelligence:7,relationships:8,stress:4}},
+      {label:'Leave early to work', result:'The work got done. The family noticed the empty chair.', changes:{workEthic:8,relationships:-10,stress:6,happiness:-4}}
+    ]
+  },
+  {
+    id:'partner_feels_second', req:{partner:true}, minAge:20, sev:'RELATIONSHIP',
+    title:'Your Partner Feels Second', icon:'💬', category:'RELATIONSHIP', accent:C.pink,
+    story:'Your partner says they support the dream, but lately they feel like a background character in your life. The conversation is calm, which somehow makes it more serious.',
+    tip:'Ambition without attention can quietly become neglect.',
+    choices:[
+      {label:'Plan a real reset weekend', result:'You made time without multitasking. The relationship felt chosen again.', changes:{cash:-300,relationships:16,happiness:16,stress:-8}},
+      {label:'Explain the grind', result:'They understood some of it, but understanding is not the same as feeling loved.', changes:{workEthic:5,relationships:-5,stress:5}},
+      {label:'Ask what they need', result:'The conversation became honest and useful. You did not solve everything, but you listened properly.', changes:{relationships:12,intelligence:5,stress:-3}}
+    ]
+  },
+  {
+    id:'child_school_call', req:{children:1}, minAge:22, sev:'FAMILY',
+    title:'Call From School', icon:'🎒', category:'FAMILY', accent:C.green,
+    story:'The school calls about your child. Nothing catastrophic, but enough that they need attention, patience, and an adult who shows up before the pattern hardens.',
+    choices:[
+      {label:'Go to the school yourself', result:'Your child saw you show up. The teacher saw it too. Small intervention, big signal.', changes:{relationships:16,happiness:8,stress:7,cash:-120}},
+      {label:'Hire extra lessons', result:'The support helped, but money had to move around.', changes:{cash:-600,intelligence:7,relationships:6,stress:4}},
+      {label:'Say they will grow out of it', result:'Maybe they will. Maybe they were asking for help in the only way they knew.', changes:{relationships:-10,stress:5,integrity:-4}}
+    ]
+  },
+  {
+    id:'boss_unpaid_overtime', req:{career:true}, minAge:19, sev:'CAREER',
+    title:'Unpaid Overtime Test', icon:'💼', category:'CAREER', accent:C.green,
+    story:'Your boss praises your attitude, then asks you to stay late again with no overtime. Everyone is watching how you handle it.',
+    choices:[
+      {label:'Negotiate boundaries', result:'You stayed professional and clear. Some respect was lost by the wrong people and gained by the right ones.', changes:{integrity:12,stress:4,leadership:8}},
+      {label:'Do it for the promotion', result:'You looked dependable, but your body and mood paid the bill.', changes:{workEthic:10,stress:16,health:-6}},
+      {label:'Refuse sharply', result:'The boundary was clear. The delivery created its own problem.', changes:{stress:-6,relationships:-8,integrity:4}}
+    ]
+  },
+  {
+    id:'coworker_voice_note', req:{career:true}, minAge:19, sev:'REPUTATION',
+    title:'The Voice Note Leaked', icon:'📱', category:'REPUTATION', accent:C.coral,
+    story:'A workplace voice note about management got forwarded into the wrong group. You did not send it, but you are in the conversation and people are asking what you think.',
+    choices:[
+      {label:'Stay factual and calm', result:'You avoided the drama without looking scared. Your reputation for judgment improved.', changes:{integrity:12,intelligence:7,stress:4}},
+      {label:'Back your coworker publicly', result:'People respected the loyalty. Management noticed the challenge.', changes:{relationships:12,communityStanding:5,stress:10}},
+      {label:'Share your own rant', result:'It felt good for an hour. Then the screenshot started moving.', changes:{happiness:6,integrity:-12,stress:16,communityStanding:-8}}
+    ]
+  },
+  {
+    id:'viral_misread', req:{followers:5000}, minAge:18, sev:'FAME',
+    title:'The Viral Clip Got Misread', icon:'🔥', category:'FAME', accent:C.violet,
+    story:'A short clip of you is moving fast, but people are reading it in a way you did not intend. The comments are split between jokes, praise, and real criticism.',
+    choices:[
+      {label:'Clarify with maturity', result:'You slowed the outrage and earned respect from people who were watching quietly.', changes:{fame:1800,integrity:12,stress:8,communityStanding:8}},
+      {label:'Lean into the controversy', result:'The numbers jumped. The trust did not.', changes:{fame:6500,happiness:12,integrity:-14,stress:14}},
+      {label:'Log off for a week', result:'The storm passed without you feeding it. Peace returned faster than the numbers grew.', changes:{health:8,stress:-18,happiness:6}}
+    ]
+  },
+  {
+    id:'brand_change_accent', req:{followers:12000}, minAge:18, sev:'FAME',
+    title:'Brand Wants You to Change', icon:'✨', category:'FAME', accent:C.gold,
+    story:'A brand likes your audience, but asks you to soften your accent and make the content feel less local. The money is real. The request sits badly.',
+    choices:[
+      {label:'Protect the island voice', result:'You declined the condition and your core audience trusted you more.', changes:{integrity:18,communityStanding:12,happiness:10}},
+      {label:'Take the deal carefully', result:'You adjusted the delivery but kept some of yourself in it. Useful money, mixed feelings.', changes:{cash:4500,stress:8,integrity:-4}},
+      {label:'Make a public point', result:'The post travelled. You became part of a bigger conversation about Caribbean identity.', changes:{fame:8000,communityStanding:14,stress:12,integrity:10}}
+    ]
+  },
+  {
+    id:'panic_attack_warning', req:{stressHigh:72}, minAge:20, sev:'HEALTH',
+    title:'Panic in the Car Park', icon:'🫀', category:'HEALTH', accent:C.coral,
+    story:'You sit in the car park with your chest tight, hands cold, and phone face down. For ten minutes, ambition does not matter. Breathing does.',
+    choices:[
+      {label:'Book help and reduce load', result:'You treated the warning like information, not weakness. The year became manageable again.', changes:{cash:-350,health:12,stress:-24,happiness:10}},
+      {label:'Tell one trusted person', result:'You did not carry it alone. That changed more than expected.', changes:{relationships:12,stress:-14,happiness:8}},
+      {label:'Push through it', result:'You got through the day, but the body saved the receipt.', changes:{workEthic:7,health:-10,stress:12}}
+    ]
+  },
+  {
+    id:'rum_cooler_invite', minAge:18, sev:'HEALTH',
+    title:'Cooler Lime Pressure', icon:'🍹', category:'HEALTH', accent:C.orange,
+    story:'The cooler is open, the music is right, and everybody keeps topping up your cup. It is friendly pressure, which can be the hardest kind to refuse.',
+    choices:[
+      {label:'Set your limit early', result:'You enjoyed the night and still owned the morning.', changes:{happiness:12,relationships:8,health:4,stress:-6}},
+      {label:'Go with the flow', result:'The night was fun until it was not. The pattern got a little easier to repeat.', changes:{happiness:16,health:-8,stress:-4}, special:'addiction_up'},
+      {label:'Leave before it turns', result:'You missed some jokes and avoided a version of the night you would regret.', changes:{health:8,stress:-10,relationships:-3}}
+    ]
+  },
+  {
+    id:'visa_document_delay', req:{migration:true}, minAge:23, sev:'MIGRATION',
+    title:'Visa Document Delay', icon:'🧳', category:'MIGRATION', accent:C.turquoise,
+    story:'One document is missing from your migration file. Nobody told you until now. The deadline is close and the office line keeps ringing out.',
+    choices:[
+      {label:'Handle it immediately', result:'You spent the day chasing stamps, copies, and signatures. The file survived.', changes:{cash:-450,stress:14,intelligence:6}},
+      {label:'Pay a professional', result:'It cost money, but the process stopped eating your whole life.', changes:{cash:-950,stress:-6,intelligence:4}},
+      {label:'Wait and hope', result:'The delay grew teeth. Hope was not a document.', changes:{stress:18,happiness:-10,relationships:-4}}
+    ]
+  },
+  {
+    id:'airport_goodbye', req:{migration:true}, minAge:23, sev:'MIGRATION',
+    title:'Airport Goodbye', icon:'✈️', category:'MIGRATION', accent:C.turquoise,
+    story:'At the airport, the suitcase is overweight and everyone is pretending the goodbye is normal. It is not. You are excited and grieving at the same time.',
+    choices:[
+      {label:'Promise regular calls', result:'You made the distance less vague. The people who love you needed that.', changes:{relationships:14,stress:-4,happiness:8}},
+      {label:'Focus on the opportunity', result:'You stepped forward with discipline, but the homesickness waited on the other side.', changes:{workEthic:10,cash:1000,relationships:-8,stress:8}},
+      {label:'Delay the move', result:'The choice surprised everyone, including you. Roots mattered more this year.', changes:{communityStanding:10,happiness:12,stress:-8,cash:-700}}
+    ]
+  },
+  {
+    id:'diaspora_connection', minAge:21, sev:'TRAVEL',
+    title:'Diaspora Link-Up', icon:'🌍', category:'TRAVEL', accent:C.teal,
+    story:'A friend abroad says there is a Caribbean networking event this month. Flights are not cheap, but the room could open doors you cannot find at home.',
+    choices:[
+      {label:'Take the trip', result:'The flight hurt your cash, but the conversations were serious. Your world got wider.', changes:{cash:-1400,relationships:16,intelligence:8,fame:1100,stress:5}},
+      {label:'Join online instead', result:'Less magic, less cost, still useful. You followed up properly.', changes:{relationships:8,intelligence:6,stress:-2}},
+      {label:'Skip it this year', result:'You kept the money and the routine. The window may open again.', changes:{cash:300,stress:-4}}
+    ]
+  },
+  {
+    id:'hurricane_relief_drive', minAge:18, sev:'COMMUNITY',
+    title:'Relief Drive After the Storm', icon:'🌀', category:'COMMUNITY', accent:C.green,
+    story:'A neighbouring island was hit hard by a storm. Local groups are collecting water, food, cash, and volunteers. The need is immediate.',
+    choices:[
+      {label:'Organise donations', result:'You moved people into action. The island saw leadership with heart.', changes:{cash:-350,communityStanding:22,leadership:10,stress:8,happiness:12}},
+      {label:'Give privately', result:'Quiet help still helped. You kept the gesture clean.', changes:{cash:-250,integrity:8,happiness:8}},
+      {label:'Share the fundraiser only', result:'It was small, but it still moved a few people to give.', changes:{communityStanding:5,stress:-2}}
+    ]
+  },
+  {
+    id:'jouvert_morning_choice', islands:['trinidad'], minAge:18, sev:'CULTURE',
+    title:'Jouvert Morning Decision', icon:'🌅', category:'CULTURE', accent:C.orange,
+    story:'It is still dark when the message comes in: the crew is outside and the truck is moving soon. Paint, powder, soca, road, and a full workday waiting after.',
+    tip:'The fun is real. So is the recovery cost.',
+    choices:[
+      {label:'Hit the road with limits', result:'You caught the freedom of the morning without letting it swallow the week.', changes:{happiness:22,relationships:12,stress:-10,health:-4,cash:-220}},
+      {label:'Turn it into content', result:'The footage carried energy people could feel. Your audience grew because the moment felt alive.', changes:{fame:2600,creative:8,happiness:14,stress:6}},
+      {label:'Skip and sleep', result:'The group chat teased you all day, but your body was grateful.', changes:{health:12,stress:-18,relationships:-4}}
+    ]
+  },
+  {
+    id:'panorama_yard_practice', islands:['trinidad'], minAge:18, sev:'CULTURE',
+    title:'Pan Yard Practice', icon:'🥁', category:'CULTURE', accent:C.teal,
+    story:'A steelband yard needs extra hands before finals. Moving pans, feeding players, recording clips, sweeping, carrying, encouraging. Not glamorous. Deeply loved.',
+    choices:[
+      {label:'Help the yard all week', result:'You became part of something bigger than entertainment. The elders noticed your respect.', changes:{communityStanding:18,relationships:14,happiness:14,stress:6}},
+      {label:'Sponsor food for players', result:'It cost money, but the gesture travelled through the community fast.', changes:{cash:-650,communityStanding:16,integrity:8,happiness:8}},
+      {label:'Only post the final performance', result:'The clip did well, but people who did the work knew you arrived at the end.', changes:{fame:1500,communityStanding:-3,stress:-2}}
+    ]
+  },
+  {
+    id:'costume_price_pressure', islands:['trinidad','barbados'], minAge:18, sev:'FINANCE',
+    title:'Costume Price Pressure', icon:'💸', category:'FINANCE', accent:C.gold,
+    story:'The costume you wanted is beautiful and expensive. Friends say memories matter. Your budget says rent also matters.',
+    choices:[
+      {label:'Choose a cheaper section', result:'You still felt the road and avoided months of financial regret.', changes:{cash:-450,happiness:14,finance:6,stress:-4}},
+      {label:'Swipe the card anyway', result:'The pictures looked incredible. The balance followed you home.', changes:{cash:-1800,happiness:24,stress:18,integrity:-4}},
+      {label:'Volunteer with the band', result:'You traded glamour for access, work, and a new behind-the-scenes network.', changes:{cash:250,relationships:12,workEthic:8,stress:8}}
+    ]
+  },
+  {
+    id:'foreday_morning_route', islands:['barbados'], minAge:18, sev:'CULTURE',
+    title:'Foreday Morning Route', icon:'🌙', category:'CULTURE', accent:C.violet,
+    story:'Foreday Morning is coming and the crew wants you there. Paint, music, night air, and the kind of freedom people talk about for weeks.',
+    choices:[
+      {label:'Go with your people', result:'The night became one of those shared memories that keeps friendships alive.', changes:{happiness:24,relationships:16,stress:-12,cash:-250,health:-4}},
+      {label:'Work a breakfast cooler', result:'You turned festival traffic into cash and still felt the rhythm from the roadside.', changes:{cash:1250,communityStanding:8,stress:10}},
+      {label:'Stay rested for Kadooment', result:'You missed the night, but you arrived at the big day with energy.', changes:{health:10,stress:-10,happiness:5}}
+    ]
+  },
+  {
+    id:'last_canes_heritage_call', islands:['barbados'], minAge:18, sev:'HERITAGE',
+    title:'Last Canes Ceremony', icon:'🎋', category:'HERITAGE', accent:C.green,
+    story:'A heritage group asks you to help with a Crop Over event honouring elders, cane field history, and the people who carried culture forward.',
+    choices:[
+      {label:'Document elders properly', result:'You captured stories that felt bigger than one festival season.', changes:{communityStanding:18,integrity:12,intelligence:8,happiness:10}},
+      {label:'Help with logistics', result:'Chairs, sound, water, transport. The invisible work made the ceremony flow.', changes:{workEthic:9,communityStanding:12,stress:8}},
+      {label:'Only attend briefly', result:'You paid respect, but the deeper stories passed by without you.', changes:{communityStanding:4,happiness:4}}
+    ]
+  },
+  {
+    id:'sumfest_street_dance', islands:['jamaica'], minAge:18, sev:'FAME',
+    title:'Sumfest Street Dance', icon:'🔊', category:'FAME', accent:C.violet,
+    story:'A free street dance pulls locals, visitors, selectors, dancers, and phones into the same space. You can feel the moment building.',
+    choices:[
+      {label:'Dance and connect', result:'You did not force anything. The energy made introductions easy.', changes:{happiness:20,relationships:14,stress:-8,cash:-120}},
+      {label:'Shoot a mini-documentary', result:'You told the story of the night instead of just showing the crowd. People shared it for the feeling.', changes:{fame:4200,creative:12,communityStanding:8,stress:8}},
+      {label:'Stay away from the crowd', result:'You avoided the noise and the risk. The moment moved without you.', changes:{health:5,stress:-8,happiness:-3}}
+    ]
+  },
+  {
+    id:'sound_clash_loyalty', islands:['jamaica'], minAge:18, sev:'REPUTATION',
+    title:'Sound Clash Loyalty Test', icon:'🎚️', category:'REPUTATION', accent:C.coral,
+    story:'Two sound crews are clashing and both sides know you. A joke online turns into a loyalty test faster than expected.',
+    choices:[
+      {label:'Keep it respectful', result:'You praised the culture without insulting either camp. Mature move.', changes:{integrity:12,communityStanding:8,stress:4}},
+      {label:'Pick a side loudly', result:'Your side loved it. The other side saved the screenshot.', changes:{fame:1800,relationships:-8,stress:10}},
+      {label:'Stay offline tonight', result:'You missed some engagement but avoided a needless enemy.', changes:{stress:-10,health:4}}
+    ]
+  },
+  {
+    id:'artisan_booth_offer', islands:['stlucia'], minAge:18, sev:'BUSINESS',
+    title:'Arts Festival Booth Offer', icon:'🧺', category:'BUSINESS', accent:C.teal,
+    story:'During festival season, an artisan booth becomes available for one weekend. It is small, but visitors are spending and the right display could open doors.',
+    choices:[
+      {label:'Take the booth seriously', result:'You treated the table like a brand. Sales were solid and two hotel buyers asked questions.', changes:{cash:1450,creative:8,communityStanding:10,stress:10}},
+      {label:'Share it with another maker', result:'Less profit, better network, and a warmer weekend.', changes:{cash:650,relationships:14,happiness:10,stress:3}},
+      {label:'Pass this time', result:'You avoided the pressure but wondered what the weekend might have become.', changes:{stress:-6,happiness:-4}}
+    ]
+  },
+  {
+    id:'hotel_guest_complaint', islands:['barbados','stlucia','jamaica','dominican'], req:{career:true}, minAge:19, sev:'CAREER',
+    title:'Tourist Complaint at Work', icon:'🏨', category:'CAREER', accent:C.orange,
+    story:'A tourist complains loudly about something that was not fully your fault. Your manager looks at you to solve it before the review goes online.',
+    choices:[
+      {label:'Fix it without taking abuse', result:'You stayed calm and set a boundary. The guest cooled down and management saw leadership.', changes:{leadership:10,integrity:8,stress:8,communityStanding:5}},
+      {label:'Apologise for everything', result:'The review was saved, but swallowing the whole blame sat badly.', changes:{stress:14,relationships:4,happiness:-6}},
+      {label:'Tell the truth bluntly', result:'You were right. You were also too sharp for the room.', changes:{integrity:6,stress:8,communityStanding:-6}}
+    ]
+  },
+  {
+    id:'diaspora_remittance_request', minAge:23, sev:'FAMILY',
+    title:'Family Abroad Needs Help', icon:'💌', category:'FAMILY', accent:C.pink,
+    story:'A relative abroad usually sends money home. This time they message you: rent jumped, hours were cut, and they need help for once.',
+    tip:'Migration can support families, but migrants also carry pressure quietly.',
+    choices:[
+      {label:'Send what you can', result:'The money mattered, but the message mattered too: support goes both ways.', changes:{cash:-800,relationships:16,integrity:8,stress:5}},
+      {label:'Offer planning instead', result:'You helped them sort the numbers and find breathing room without draining yourself.', changes:{intelligence:8,relationships:10,stress:-2}},
+      {label:'Ignore the message', result:'You protected your cash and damaged something less visible.', changes:{cash:300,relationships:-12,integrity:-8}}
+    ]
+  },
+  {
+    id:'no_contract_job_offer', minAge:18, sev:'CAREER',
+    title:'Good Money, No Contract', icon:'📄', category:'CAREER', accent:C.gold,
+    story:'A side job offers cash immediately, but no written agreement. Everybody says the person is “good for it”. Your gut wants paper.',
+    choices:[
+      {label:'Ask for a simple agreement', result:'Some people acted offended. The serious ones respected it. You got paid clean.', changes:{cash:900,intelligence:8,integrity:8,stress:4}},
+      {label:'Take the handshake deal', result:'You got some money, then spent too much energy chasing the rest.', changes:{cash:450,stress:14,relationships:-4}},
+      {label:'Walk away', result:'No cash came in, but no headache followed you either.', changes:{stress:-8,integrity:6}}
+    ]
+  },
+  {
+    id:'clinic_screening_day', minAge:24, sev:'HEALTH',
+    title:'Free Screening Day', icon:'🩺', category:'HEALTH', accent:C.green,
+    story:'A community clinic is offering blood pressure, blood sugar, and basic counselling checks. You feel fine, which is exactly why you are tempted to skip.',
+    choices:[
+      {label:'Do the screening', result:'You caught a small warning early and got practical advice before it became expensive.', changes:{health:16,intelligence:6,stress:-8,happiness:6}},
+      {label:'Bring a parent too', result:'The checkup became a family intervention in the best way.', changes:{health:12,relationships:14,communityStanding:6,stress:-5}},
+      {label:'Skip it', result:'Nothing happened today. That was not the same as being fine.', changes:{stress:-2,health:-4}}
+    ]
+  },
+  {
+    id:'storm_supply_shortage', minAge:18, sev:'DISASTER',
+    title:'Storm Supplies Running Out', icon:'🧰', category:'DISASTER', accent:C.coral,
+    story:'A storm warning sends everyone to the shops. Water, batteries, plywood, gas, medication. The shelves are thinning and someone behind you is panicking.',
+    choices:[
+      {label:'Buy only what you need', result:'You prepared without hoarding. The decision felt small until someone thanked you.', changes:{cash:-420,integrity:10,communityStanding:8,stress:4}},
+      {label:'Stock extra for neighbours', result:'You spent more, but your street became calmer because someone planned ahead.', changes:{cash:-850,communityStanding:18,relationships:12,stress:8}},
+      {label:'Flip supplies for profit', result:'The cash came fast. So did the looks from people who remembered.', changes:{cash:900,integrity:-22,communityStanding:-24,stress:10}}
+    ]
+  }
+];
+
 export const PROVERBS = [
   'Every day bucket goes to the well — one day the bottom must drop out.',
   'Rain does fall on everybody. It is who has the umbrella that matters.',
