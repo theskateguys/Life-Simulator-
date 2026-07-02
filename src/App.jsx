@@ -11,6 +11,9 @@ import ActionCard from './components/ActionCard.jsx';
 import FinancePanel from './components/FinancePanel.jsx';
 import FamilyPanel from './components/FamilyPanel.jsx';
 import YearReview from './components/YearReview.jsx';
+import moneySavingsSticker from './assets/stickers/money-savings.png';
+import propertyHomeKeySticker from './assets/stickers/property-home-key.png';
+import businessStorefrontSticker from './assets/stickers/business-storefront.png';
 
 const screens = { title:'title', intro:'intro', island:'island', background:'background', profile:'profile', game:'game', review:'review', death:'death', generation:'generation', end:'end' };
 const baseBackground = `linear-gradient(160deg,${C.bg} 0%,${C.bgM} 58%,${C.bg} 100%)`;
@@ -31,6 +34,24 @@ function Card({children,style={}}) {
 function Toast({text}) {
   if (!text) return null;
   return <div style={{position:'fixed',top:12,left:'50%',transform:'translateX(-50%)',zIndex:150,background:'#0E3024',border:`1px solid ${C.green}55`,borderRadius:11,padding:'9px 14px',color:C.green,fontWeight:800,fontSize:12,boxShadow:'0 5px 20px rgba(0,0,0,.45)',whiteSpace:'nowrap'}}>{text}</div>;
+}
+
+const CATEGORY_STICKERS = {
+  money: {src:moneySavingsSticker, alt:'Savings and coins for money choices', tone:'money'},
+  property: {src:propertyHomeKeySticker, alt:'Home key for property choices', tone:'property'},
+  business: {src:businessStorefrontSticker, alt:'Storefront for business choices', tone:'business'}
+};
+
+function CategoryVisual({category}) {
+  const sticker = CATEGORY_STICKERS[category.id];
+  if (!sticker) return <span style={{fontSize:24}}>{category.categoryLocked?'🔒':category.emoji}</span>;
+
+  return (
+    <span className={`category-sticker category-sticker--${sticker.tone}${category.categoryLocked ? ' is-locked' : ''}`}>
+      <img className="category-sticker__image" src={sticker.src} alt={sticker.alt} />
+      {category.categoryLocked && <span className="category-sticker__lock" aria-hidden="true">🔒</span>}
+    </span>
+  );
 }
 
 function StatPill({emoji,label,value,color}) {
@@ -469,7 +490,7 @@ export default function App() {
               const story = CATEGORY_STORIES[category.id] || {promise:category.tag, vibe:'Life chapter'};
               return <button key={category.id} className="chapter-card choice-lift" onClick={()=>setSelectedCategory(category.id)} style={{cursor:'pointer',textAlign:'left',padding:'12px 13px',border:`1px solid ${category.color}62`,background:`linear-gradient(135deg,${category.color}18,rgba(255,255,255,.05))`,color:C.text,boxShadow:`0 14px 32px ${category.color}12`}}>
                 <div style={{display:'flex',alignItems:'center',gap:10}}>
-                  <span style={{fontSize:25}}>{category.emoji}</span>
+                  <CategoryVisual category={category} />
                   <div style={{flex:1,minWidth:0}}>
                     <p style={{fontSize:9,color:category.color,fontWeight:900,letterSpacing:1.2,textTransform:'uppercase',margin:'0 0 2px'}}>{story.vibe}</p>
                     <p style={{fontSize:14,fontWeight:950,margin:'0 0 2px'}}>{category.label}</p>
@@ -487,7 +508,7 @@ export default function App() {
               const story = CATEGORY_STORIES[category.id] || {promise:category.tag, vibe:'Life chapter'};
               return <button key={category.id} className="chapter-card choice-lift" onClick={()=>!category.categoryLocked && setSelectedCategory(category.id)} disabled={category.categoryLocked} style={{cursor:category.categoryLocked?'not-allowed':'pointer',textAlign:'left',padding:'12px',border:`1px solid ${category.categoryLocked?'rgba(255,255,255,.14)':category.color+'55'}`,background:category.categoryLocked?'rgba(255,255,255,.025)':`linear-gradient(160deg,${category.color}12,rgba(255,255,255,.04))`,color:C.text,opacity:category.categoryLocked?0.55:1}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:7}}>
-                  <span style={{fontSize:24}}>{category.categoryLocked?'🔒':category.emoji}</span>
+                  <CategoryVisual category={category} />
                   <span style={{fontSize:8,color:category.categoryLocked?C.faint:category.color,border:`1px solid ${category.categoryLocked?C.faint:category.color}33`,borderRadius:20,padding:'2px 6px',fontWeight:900,textTransform:'uppercase'}}>{category.categoryLocked?'Locked':story.vibe}</span>
                 </div>
                 <p style={{fontWeight:950,fontSize:13,color:category.categoryLocked?C.dim:category.color,margin:'0 0 4px'}}>{category.label}</p>

@@ -139,6 +139,61 @@ button {
   transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
 }
 
+.category-sticker {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  flex: 0 0 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 18px;
+  background: rgba(255,255,255,.04);
+  overflow: visible;
+}
+
+.category-sticker__image {
+  display: block;
+  width: 88%;
+  height: 88%;
+  object-fit: contain;
+  transform-origin: center;
+  transition: transform 180ms ease, filter 180ms ease;
+  filter: drop-shadow(0 9px 18px rgba(0,0,0,.22));
+}
+
+.category-sticker.is-locked {
+  opacity: .78;
+  filter: grayscale(.18);
+}
+
+.category-sticker__lock {
+  position: absolute;
+  right: -4px;
+  bottom: -4px;
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 999px;
+  background: rgba(5,14,26,.92);
+  border: 1px solid rgba(255,255,255,.18);
+  font-size: 12px;
+}
+
+.event-danger-sticker {
+  display: block;
+  width: 86px;
+  height: 86px;
+  margin: 0 auto;
+  object-fit: contain;
+  animation: danger-sticker-pulse 2.8s ease-in-out infinite;
+  filter: drop-shadow(0 0 18px rgba(255,107,107,.46));
+}
+
+.event-modal--danger {
+  animation: event-open-shake 360ms ease-out both;
+}
+
 .chapter-card:enabled:active,
 .choice-lift:enabled:active {
   transform: translateY(1px) scale(.99);
@@ -148,6 +203,21 @@ button {
   .chapter-card:enabled:hover,
   .choice-lift:enabled:hover {
     transform: translateY(-2px);
+  }
+
+  .chapter-card:enabled:hover .category-sticker--money .category-sticker__image {
+    animation: money-sticker-bounce 760ms ease-in-out infinite;
+    filter: drop-shadow(0 0 18px rgba(255,214,10,.72));
+  }
+
+  .chapter-card:enabled:hover .category-sticker--property .category-sticker__image {
+    transform: translateY(-4px) rotate(-6deg);
+    filter: drop-shadow(0 12px 20px rgba(0,217,255,.28));
+  }
+
+  .chapter-card:enabled:hover .category-sticker--business .category-sticker__image {
+    transform: translateY(-4px);
+    filter: drop-shadow(0 0 17px rgba(255,184,77,.58));
   }
 }
 
@@ -193,6 +263,31 @@ button {
   100% { transform: scaleX(1); }
 }
 
+@keyframes money-sticker-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+@keyframes danger-sticker-pulse {
+  0%, 100% {
+    transform: scale(1);
+    filter: drop-shadow(0 0 12px rgba(255,107,107,.36));
+  }
+  50% {
+    transform: scale(1.045);
+    filter: drop-shadow(0 0 24px rgba(255,107,107,.72));
+  }
+}
+
+@keyframes event-open-shake {
+  0% { transform: translateX(0); }
+  18% { transform: translateX(-6px); }
+  36% { transform: translateX(5px); }
+  54% { transform: translateX(-3px); }
+  72% { transform: translateX(2px); }
+  100% { transform: translateX(0); }
+}
+
 @media (max-width: 390px) {
   .story-wrap {
     padding-inline: 11px;
@@ -204,5 +299,27 @@ button {
 
   .signal-grid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .category-sticker {
+    width: 58px;
+    height: 58px;
+    flex-basis: 58px;
+    border-radius: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
+
+  .event-danger-sticker {
+    animation: none !important;
   }
 }

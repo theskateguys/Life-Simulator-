@@ -1,5 +1,6 @@
 import React from 'react';
 import { C } from '../data/gameData.js';
+import dangerStormSticker from '../assets/stickers/danger-storm.png';
 
 // Map event category to severity for visual treatment
 function getSeverityStyle(event) {
@@ -52,6 +53,15 @@ function getSeverityStyle(event) {
   };
 }
 
+function shouldUseDangerSticker(event) {
+  const sev = (event.sev || '').toUpperCase();
+  const cat = (event.category || '').toUpperCase();
+  const eventText = `${event.id || ''} ${event.title || ''}`.toLowerCase();
+  const warningText = /(hurricane|storm|severe.?warning|health.?warning)/.test(eventText);
+
+  return sev === 'DANGER' || sev === 'CRISIS' || cat === 'DANGER' || cat === 'HEALTH' || warningText;
+}
+
 export function Modal({children, accent=C.gold, onClose, dismissible=false}) {
   return (
     <div
@@ -72,10 +82,12 @@ export function EventModal({event, onChoose}) {
   if (!event) return null;
   const sv = getSeverityStyle(event);
   const isCritical = sv.pulse;
+  const showDangerSticker = shouldUseDangerSticker(event);
 
   return (
     <div style={{position:'fixed',inset:0,zIndex:100,background:'rgba(0,0,0,0.80)',backdropFilter:'blur(10px)',display:'flex',alignItems:'center',justifyContent:'center',padding:14}}>
       <div
+        className={showDangerSticker ? 'event-modal event-modal--danger' : 'event-modal'}
         onClick={e=>e.stopPropagation()}
         style={{
           width:'100%',maxWidth:460,maxHeight:'92vh',overflowY:'auto',
@@ -92,7 +104,11 @@ export function EventModal({event, onChoose}) {
 
         {/* Header */}
         <div style={{textAlign:'center',marginBottom:14}}>
-          <div style={{fontSize:44,filter:`drop-shadow(0 0 14px ${sv.hdr}66)`}}>{event.icon}</div>
+          {showDangerSticker ? (
+            <img className="event-danger-sticker" src={dangerStormSticker} alt="Storm warning illustration for a danger event" />
+          ) : (
+            <div style={{fontSize:44,filter:`drop-shadow(0 0 14px ${sv.hdr}66)`}}>{event.icon}</div>
+          )}
           <div style={{display:'inline-flex',alignItems:'center',gap:6,background:sv.badge,border:`1px solid ${sv.badgeBd}`,borderRadius:20,padding:'4px 14px',margin:'8px 0 5px'}}>
             <span style={{fontSize:10,fontWeight:800,color:sv.hdr,letterSpacing:1.5,textTransform:'uppercase'}}>{event.category}</span>
             {isCritical && <span style={{fontSize:9,fontWeight:900,color:C.red,letterSpacing:1}}>⚠ CRITICAL</span>}
