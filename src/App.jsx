@@ -42,12 +42,12 @@ const CATEGORY_STICKERS = {
   business: {src:businessStorefrontSticker, alt:'Storefront for business choices', tone:'business'}
 };
 
-function CategoryVisual({category}) {
+function CategoryVisual({category, selected=false}) {
   const sticker = CATEGORY_STICKERS[category.id];
   if (!sticker) return <span style={{fontSize:24}}>{category.categoryLocked?'🔒':category.emoji}</span>;
 
   return (
-    <span className={`category-sticker category-sticker--${sticker.tone}${category.categoryLocked ? ' is-locked' : ''}`}>
+    <span className={`category-sticker category-sticker--${sticker.tone}${category.categoryLocked ? ' is-locked' : ''}${selected ? ' is-selected' : ''}`}>
       <img className="category-sticker__image" src={sticker.src} alt={sticker.alt} />
       {category.categoryLocked && <span className="category-sticker__lock" aria-hidden="true">🔒</span>}
     </span>
@@ -128,6 +128,12 @@ const CATEGORY_STORIES = {
   property:{promise:'Manage assets that can change your long-term life.', vibe:'Asset chapter'}
 };
 
+const LOCK_INSTRUCTIONS = {
+  business:'Launch a Small Business to unlock',
+  property:'Save enough for a property deposit to unlock',
+  damian:'Unlocks at age 28'
+};
+
 const ISLAND_UI_THEMES = {
   jamaica:{primary:'#FFD60A', secondary:'#2FD66B', deep:'#07140B', soft:'#10321A', mood:'stage lights and mountain night'},
   trinidad:{primary:'#FF4D5A', secondary:'#FFD166', deep:'#15070B', soft:'#2B0F16', mood:'Carnival pulse and city ambition'},
@@ -186,24 +192,89 @@ function goalCategoryOrder(goalId) {
   return map[goalId] || map.own_path;
 }
 
-function recommendedCategories(categories, game) {
+function guidanceSnapshot(game, finance = game.finance) {
+  const f = finance || game.finance;
+  const strongestSkill = Math.max(0, ...Object.values(game.skills || {}));
+  const builtIncome = game.career !== 'none' || game.business.active || game.properties.some(property => property.kind === 'rental') || (f.contracts || []).length > 0;
+  const monthlyNet = (f.monthlyIncome || 0) - (f.monthlyExpenses || 0);
+  const debt = (f.loanDebt || 0) + (f.mortgageDebt || 0);
+  const surplusCash = f.cash >= Math.max(2000, (f.emergencyFundTarget || 0) * 0.5);
+  const hasMoneyToManage = builtIncome || monthlyNet > 250 || surplusCash || (f.investments || 0) > 0 || debt > 0 || Boolean(f.pardner?.active);
+  const earlyStarter = game.age === 18 && game.career === 'none' && !game.business.active && game.properties.length === 0 && strongestSkill < 18 && f.cash < Math.max(2500, (f.emergencyFundTarget || 0) * 0.35);
+
+  return {strongestSkill, builtIncome, monthlyNet, debt, hasMoneyToManage, earlyStarter};
+}
+
+function recommendedCategories(categories, game, finance) {
   const preferred = goalCategoryOrder(game.goalId);
   const unlocked = categories.filter(category => !category.categoryLocked);
-  const urgent = [];
-  if (game.stats.health < 45 || game.stats.stress > 65) urgent.push('health');
-  if (game.finance.cash < game.finance.emergencyFundTarget * 0.25) urgent.push('money');
-  if (game.partner || game.children.length) urgent.push('life');
-  const order = [...urgent, ...preferred, ...unlocked.map(category => category.id)];
-  const seen = new Set();
-  return order
-    .map(id => unlocked.find(category => category.id === id))
-    .filter(Boolean)
-    .filter(category => {
-      if (seen.has(category.id)) return false;
-      seen.add(category.id);
-      return true;
-    })
+  const guide = guidanceSnapshot(game, finance);
+  const baseOrder = unlocked.map(category => category.id);
+  const score = Object.fromEntries(baseOrder.map((id, index) => [id, 100 - index]));
+
+  preferred.forEach((id, index) => { if (score[id] !== undefined) score[id] += 28 - index * 5; });
+
+  if (guide.earlyStarter) {
+    score.learn = (score.learn || 0) + 120;
+    score.career = (score.career || 0) + 105;
+    score.hustle = (score.hustle || 0) + 95;
+    score.money = (score.money || 0) - 55;
+  } else {
+    if (guide.strongestSkill < 24) score.learn = (score.learn || 0) + 32;
+    if (game.career === 'none') score.career = (score.career || 0) + 30;
+    if (guide.monthlyNet < 0) score.hustle = (score.hustle || 0) + 28;
+  }
+
+  if (game.stats.health < 45 || game.stats.stress > 65) score.health = (score.health || 0) + 85;
+  if (game.partner || game.children.length) score.life = (score.life || 0) + 38;
+  if (guide.hasMoneyToManage) score.money = (score.money || 0) + 70;
+  else score.money = (score.money || 0) - 30;
+
+  return unlocked
+    .map((category, index) => ({category, index, value:score[category.id] || 0}))
+    .sort((a, b) => b.value - a.value || a.index - b.index)
+    .map(item => item.category)
     .slice(0, 3);
+}
+
+function currentPriority(game, finance) {
+  const guide = guidanceSnapshot(game, finance);
+  if (game.stats.health < 35) return {
+    text:'Stabilize your health before ambition starts costing too much.',
+    goals:['Recover health', 'Lower stress', 'Avoid risky choices']
+  };
+  if (game.stats.stress > 70) return {
+    text:'Reduce pressure this year so your next big move has room to work.',
+    goals:['Rest or reset', 'Protect relationships', 'Pick one focused ambition']
+  };
+  if (guide.earlyStarter) return {
+    text:'Build your first income path: learn a skill, start a hustle, and protect your cash.',
+    goals:['Learn one practical skill', 'Try a first career move', 'Earn side cash safely']
+  };
+  if (game.career === 'none') return {
+    text:'Turn your effort into steady income before chasing bigger financial moves.',
+    goals:['Grow a marketable skill', 'Apply career focus', 'Use hustle for cash flow']
+  };
+  if (guide.debt > 0) return {
+    text:'Keep income moving while you manage debt and protect your future cash.',
+    goals:['Track debt pressure', 'Preserve cash', 'Avoid extra borrowing']
+  };
+  if (guide.hasMoneyToManage && finance.cash < finance.emergencyFundTarget * 0.35) return {
+    text:'You have income now; build a cash buffer before bigger risks.',
+    goals:['Save consistently', 'Keep expenses controlled', 'Invest only when ready']
+  };
+  if (game.business.active) return {
+    text:'Your business is open; improve systems, quality, and cash flow.',
+    goals:['Increase revenue', 'Reduce stress', 'Build owner skills']
+  };
+  if (game.properties.length > 0) return {
+    text:'Protect your property path by balancing repairs, cash, and mortgage pressure.',
+    goals:['Watch mortgage debt', 'Keep cash ready', 'Improve property value']
+  };
+  return {
+    text:'Choose one meaningful chapter and make this year move your story forward.',
+    goals:['Spend focus clearly', 'Protect your wellbeing', 'Build toward your life goal']
+  };
 }
 
 export default function App() {
@@ -330,9 +401,9 @@ export default function App() {
 
   const categories = useMemo(()=>{
     if (!game) return [];
-    const basics = ACTION_CATEGORIES.map(category => ({...category, categoryLocked:category.id === 'damian' && game.age < 28, categoryLock:category.id === 'damian' && game.age < 28 ? `Unlocks at age 28 · now age ${game.age}` : null}));
-    basics.push({id:'business',label:'BUSINESS',emoji:'🏢',color:C.pink,tag:game.business.active?'Manage systems and cash flow.':'Locked path: start a business through an opportunity.',items:BUSINESS_ACTIONS,categoryLocked:!game.business.active,categoryLock:'Start a business through an event or business opportunity first.'});
-    basics.push({id:'property',label:'PROPERTY',emoji:'🏠',color:C.teal,tag:game.properties.length?'Manage the assets you own.':'Locked path: buy a property through MONEY.',items:PROPERTY_ACTIONS,categoryLocked:game.properties.length===0,categoryLock:'Buy your first property to manage it.'});
+    const basics = ACTION_CATEGORIES.map(category => ({...category, categoryLocked:category.id === 'damian' && game.age < 28, categoryLock:category.id === 'damian' && game.age < 28 ? LOCK_INSTRUCTIONS.damian : null}));
+    basics.push({id:'business',label:'BUSINESS',emoji:'🏢',color:C.pink,tag:game.business.active?'Manage systems and cash flow.':'Locked path: start a business through an opportunity.',items:BUSINESS_ACTIONS,categoryLocked:!game.business.active,categoryLock:LOCK_INSTRUCTIONS.business});
+    basics.push({id:'property',label:'PROPERTY',emoji:'🏠',color:C.teal,tag:game.properties.length?'Manage the assets you own.':'Locked path: buy a property through MONEY.',items:PROPERTY_ACTIONS,categoryLocked:game.properties.length===0,categoryLock:LOCK_INSTRUCTIONS.property});
     return basics;
   },[game]);
 
@@ -423,11 +494,11 @@ export default function App() {
     const achievementItems = ACHIEVEMENTS.filter(item=>game.achievements.includes(item.id));
     const familyHeadline = game.partner ? `❤️ ${game.partner.name.split(' ')[0]} · ${Math.round(game.partner.relationship)}%` : 'No partner yet';
     const career = CAREERS[game.career] || CAREERS.none;
-    const monthlyNet = finance.monthlyIncome - finance.monthlyExpenses;
-    const signedMoney = value => `${value >= 0 ? '+' : '-'}${money(Math.abs(value))}`;
     const theme = islandTheme(game.islandId);
     const mood = storyMood(game,island,activeGoal);
-    const recommended = recommendedCategories(categories, game);
+    const recommended = recommendedCategories(categories, game, finance);
+    const priority = currentPriority(game, finance);
+    const focusMarkers = Array.from({length:YEAR_FOCUS}, (_, index) => `C${index + 1}`);
     const recentLog = game.yearLog.slice(-5);
     const statRows = [
       ['😊','Joy','happiness',C.gold],['❤️','Health','health',C.coral],['🧠','Stress','stress',C.violet],['🤝','Social','relationships',C.turquoise],
@@ -465,13 +536,19 @@ export default function App() {
               </div>
               <p style={{fontSize:18,color:theme.primary,fontWeight:950,margin:0}}>{game.yearFocus}/{YEAR_FOCUS}</p>
             </div>
-            <div style={{display:'grid',gridTemplateColumns:`repeat(${YEAR_FOCUS},1fr)`,gap:4,marginBottom:12}}>{Array.from({length:YEAR_FOCUS}).map((_,index)=><div key={index} className={`focus-pip ${index<game.yearFocus?'is-used':''}`} style={{background:index<game.yearFocus?`linear-gradient(90deg,${theme.primary},${theme.secondary})`:'rgba(255,255,255,0.11)',boxShadow:index<game.yearFocus?`0 0 10px ${theme.primary}66`:'none'}} />)}</div>
+            <div className="focus-timeline" style={{gridTemplateColumns:`repeat(${YEAR_FOCUS},1fr)`}}>{focusMarkers.map((marker,index)=><div key={marker} className={`focus-step ${index<game.yearFocus?'is-used':''}`}><div className={`focus-pip ${index<game.yearFocus?'is-used':''}`} style={{background:index<game.yearFocus?`linear-gradient(90deg,${theme.primary},${theme.secondary})`:'rgba(255,255,255,0.11)',boxShadow:index<game.yearFocus?`0 0 10px ${theme.primary}66`:'none'}} /><span>{marker}</span></div>)}</div>
             <div className="signal-grid">{signalRows.map(([emoji,label,value,color])=><div key={label} className="signal-card"><p style={{fontSize:8,color:C.faint,margin:'0 0 3px'}}>{emoji} {label}</p><p style={{fontSize:14,color,fontWeight:950,margin:0,overflowWrap:'anywhere'}}>{value}</p></div>)}</div>
             <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:8}}>
               <Button onClick={saveCurrent} secondary accent={theme.secondary}>Save</Button>
               <Button disabled={game.yearFocus < YEAR_FOCUS} onClick={()=>finishYear(game)} accent={theme.primary}>{game.yearFocus<YEAR_FOCUS?`${YEAR_FOCUS-game.yearFocus} focus left`:'Wrap Up Age'}</Button>
             </div>
           </div>
+        </section>
+
+        <section className="story-panel priority-panel" style={{padding:'12px 13px',marginTop:10,borderColor:`${theme.primary}38`}}>
+          <p style={{fontSize:9,color:theme.primary,fontWeight:900,letterSpacing:1.7,textTransform:'uppercase',margin:'0 0 6px'}}>Current priority</p>
+          <p style={{fontSize:12,color:C.text,lineHeight:1.5,fontWeight:800,margin:'0 0 9px'}}>{priority.text}</p>
+          <div className="priority-goals">{priority.goals.slice(0,3).map(goal=><span key={goal}><i aria-hidden="true" />{goal}</span>)}</div>
         </section>
 
         {game.stats.health<25 && <div className="story-panel" style={{padding:'10px 12px',borderColor:`${C.coral}55`,marginTop:10}}><p style={{fontSize:11,color:C.coral,fontWeight:900,margin:0}}>Health is critical. Your body needs immediate attention.</p></div>}
@@ -506,13 +583,13 @@ export default function App() {
             <p style={{fontSize:10,letterSpacing:1.8,color:C.dim,fontWeight:900,textTransform:'uppercase',margin:'0 0 8px'}}>Choose this chapter</p>
             <div className="chapter-grid" style={{marginBottom:14}}>{categories.map(category=>{
               const story = CATEGORY_STORIES[category.id] || {promise:category.tag, vibe:'Life chapter'};
-              return <button key={category.id} className="chapter-card choice-lift" onClick={()=>!category.categoryLocked && setSelectedCategory(category.id)} disabled={category.categoryLocked} style={{cursor:category.categoryLocked?'not-allowed':'pointer',textAlign:'left',padding:'12px',border:`1px solid ${category.categoryLocked?'rgba(255,255,255,.14)':category.color+'55'}`,background:category.categoryLocked?'rgba(255,255,255,.025)':`linear-gradient(160deg,${category.color}12,rgba(255,255,255,.04))`,color:C.text,opacity:category.categoryLocked?0.55:1}}>
+              return <button key={category.id} className={`chapter-card choice-lift${category.categoryLocked?' is-locked':''}`} onClick={()=>!category.categoryLocked && setSelectedCategory(category.id)} disabled={category.categoryLocked} style={{cursor:category.categoryLocked?'not-allowed':'pointer',textAlign:'left',padding:'12px',border:`1px solid ${category.categoryLocked?'rgba(255,255,255,.20)':category.color+'55'}`,background:category.categoryLocked?'rgba(255,255,255,.04)':`linear-gradient(160deg,${category.color}12,rgba(255,255,255,.04))`,color:C.text,opacity:category.categoryLocked?0.82:1}}>
                 <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:8,marginBottom:7}}>
                   <CategoryVisual category={category} />
                   <span style={{fontSize:8,color:category.categoryLocked?C.faint:category.color,border:`1px solid ${category.categoryLocked?C.faint:category.color}33`,borderRadius:20,padding:'2px 6px',fontWeight:900,textTransform:'uppercase'}}>{category.categoryLocked?'Locked':story.vibe}</span>
                 </div>
                 <p style={{fontWeight:950,fontSize:13,color:category.categoryLocked?C.dim:category.color,margin:'0 0 4px'}}>{category.label}</p>
-                <p style={{fontSize:10,color:C.muted,lineHeight:1.38,margin:'0 0 7px'}}>{category.categoryLocked?category.categoryLock:story.promise}</p>
+                <p style={{fontSize:10,color:C.muted,lineHeight:1.38,margin:'0 0 7px',fontWeight:category.categoryLocked?800:500}}>{category.categoryLocked?category.categoryLock:story.promise}</p>
                 <p style={{fontSize:9,color:C.faint,fontWeight:800,margin:0}}>{category.items.length} choices</p>
               </button>;
             })}</div>
@@ -534,11 +611,16 @@ export default function App() {
           <div className="story-panel" style={{marginBottom:10,borderColor:`${C.gold}30`}}><button onClick={()=>setOpen(state=>({...state,achievements:!state.achievements}))} style={{width:'100%',cursor:'pointer',textAlign:'left',padding:'11px 12px',border:0,background:'transparent',color:C.gold,fontWeight:900,fontSize:12}}>Achievements · {achievementItems.length}/{ACHIEVEMENTS.length} <span style={{float:'right',color:C.faint}}>{open.achievements?'▲':'▼'}</span></button>{open.achievements&&<div style={{padding:'0 12px 12px'}}>{ACHIEVEMENTS.map(item=>{const unlocked=game.achievements.includes(item.id); return <div key={item.id} style={{padding:'6px 0',display:'flex',gap:7,opacity:unlocked?1:.4}}><span>{item.emoji}</span><div><p style={{fontSize:11,fontWeight:800,color:unlocked?C.gold:C.dim,margin:0}}>{item.title}</p><p style={{fontSize:9,color:C.faint,margin:'1px 0 0'}}>{item.text}</p></div></div>})}</div>}</div>
         </> : <>
           <button onClick={()=>setSelectedCategory(null)} className="choice-lift" style={{cursor:'pointer',border:`1px solid ${selected.color}55`,background:`${selected.color}14`,color:selected.color,padding:'8px 11px',borderRadius:999,fontWeight:900,fontSize:11,margin:'14px 0 10px'}}>← Back to chapter map</button>
-          <section className="story-panel" style={{padding:'14px',marginBottom:10,borderColor:`${selected.color}42`,background:`linear-gradient(150deg,${selected.color}12,rgba(255,255,255,.045))`}}>
-            <p style={{fontSize:10,color:selected.color,fontWeight:900,letterSpacing:1.4,textTransform:'uppercase',margin:'0 0 5px'}}>{CATEGORY_STORIES[selected.id]?.vibe || 'Life chapter'}</p>
-            <h2 style={{fontWeight:950,fontSize:22,lineHeight:1.05,color:selected.color,margin:'0 0 7px'}}>{selected.emoji} {selected.label}</h2>
+          <section className="story-panel selected-chapter-card" style={{padding:'14px',marginBottom:10,borderColor:`${selected.color}66`,background:`linear-gradient(150deg,${selected.color}14,rgba(255,255,255,.045))`,boxShadow:`0 14px 38px ${selected.color}18`}}>
+            <div style={{display:'flex',gap:11,alignItems:'center',marginBottom:8}}>
+              <CategoryVisual category={selected} selected />
+              <div style={{flex:1,minWidth:0}}>
+                <p style={{fontSize:10,color:selected.color,fontWeight:900,letterSpacing:1.4,textTransform:'uppercase',margin:'0 0 5px'}}>{CATEGORY_STORIES[selected.id]?.vibe || 'Life chapter'}</p>
+                <h2 style={{fontWeight:950,fontSize:22,lineHeight:1.05,color:selected.color,margin:0}}>{selected.label}</h2>
+              </div>
+            </div>
             <p style={{fontSize:12,color:C.muted,lineHeight:1.6,margin:'0 0 8px'}}>{selected.categoryLocked?selected.categoryLock:(CATEGORY_STORIES[selected.id]?.promise || selected.tag)}</p>
-            <p style={{fontSize:10,color:C.faint,margin:0}}>Pick a response. The outcome becomes part of this year’s story log.</p>
+            <p style={{fontSize:10,color:C.faint,margin:0}}>Pick a response. The outcome becomes part of this year's story log.</p>
           </section>
           <div style={{display:'flex',flexDirection:'column',gap:9}}>{selected.items.map(action=>{
             let status = canUseAction(game,action);

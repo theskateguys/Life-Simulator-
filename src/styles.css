@@ -128,6 +128,41 @@ button {
   background: rgba(255,255,255,.045);
 }
 
+.priority-panel {
+  box-shadow: 0 14px 34px color-mix(in srgb, var(--island-primary) 12%, transparent);
+}
+
+.priority-goals {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.priority-goals span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 100%;
+  min-width: 0;
+  padding: 5px 7px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--island-primary) 32%, rgba(255,255,255,.12));
+  background: color-mix(in srgb, var(--island-primary) 10%, rgba(255,255,255,.04));
+  color: rgba(255,255,255,.78);
+  font-size: 9px;
+  font-weight: 850;
+  line-height: 1.25;
+}
+
+.priority-goals i {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 999px;
+  background: var(--island-primary);
+  box-shadow: 0 0 10px color-mix(in srgb, var(--island-primary) 70%, transparent);
+}
+
 .chapter-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -136,7 +171,11 @@ button {
 
 .chapter-card {
   border-radius: 15px;
-  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+  transition: transform 180ms ease, border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+}
+
+.chapter-card.is-locked {
+  color: rgba(255,255,255,.86);
 }
 
 .category-sticker {
@@ -166,6 +205,10 @@ button {
   filter: grayscale(.18);
 }
 
+.category-sticker.is-selected .category-sticker__image {
+  animation: selected-sticker-pop 520ms ease-out both;
+}
+
 .category-sticker__lock {
   position: absolute;
   right: -4px;
@@ -192,6 +235,11 @@ button {
 
 .event-modal--danger {
   animation: event-open-shake 360ms ease-out both;
+}
+
+.selected-chapter-card {
+  transform: translateY(-2px);
+  animation: selected-card-lift 260ms ease-out both;
 }
 
 .chapter-card:enabled:active,
@@ -228,14 +276,38 @@ button {
   overflow: hidden;
 }
 
+.focus-timeline {
+  display: grid;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.focus-step {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
 .focus-pip {
-  height: 7px;
+  height: 8px;
   border-radius: 999px;
   transition: background 240ms ease, box-shadow 240ms ease, transform 240ms ease;
 }
 
 .focus-pip.is-used {
   animation: pip-pop 280ms ease-out both;
+}
+
+.focus-step span {
+  color: rgba(255,255,255,.42);
+  font-size: 7px;
+  font-weight: 850;
+  line-height: 1;
+  text-align: center;
+}
+
+.focus-step.is-used span {
+  color: rgba(255,255,255,.78);
 }
 
 .soft-scroll {
@@ -261,6 +333,17 @@ button {
 @keyframes pip-pop {
   0% { transform: scaleX(.65); }
   100% { transform: scaleX(1); }
+}
+
+@keyframes selected-card-lift {
+  from { opacity: .88; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(-2px); }
+}
+
+@keyframes selected-sticker-pop {
+  0% { transform: scale(.94) rotate(-2deg); }
+  55% { transform: scale(1.08) rotate(2deg); }
+  100% { transform: scale(1) rotate(0); }
 }
 
 @keyframes money-sticker-bounce {
@@ -306,6 +389,14 @@ button {
     height: 58px;
     flex-basis: 58px;
     border-radius: 16px;
+  }
+
+  .focus-timeline {
+    gap: 3px;
+  }
+
+  .focus-step span {
+    font-size: 6px;
   }
 }
 
