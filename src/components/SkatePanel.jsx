@@ -30,7 +30,7 @@ export default function SkatePanel({game, color}) {
   const conditionColor = condition < 35 ? C.coral : condition < 65 ? C.gold : C.green;
 
   return (
-    <section className="story-panel" style={{padding:'12px 13px',marginTop:10,borderColor:`${color}38`}}>
+    <section className="story-panel skate-panel" style={{borderColor:`${color}38`}}>
       <div style={{display:'flex',justifyContent:'space-between',gap:10,alignItems:'flex-start',marginBottom:9}}>
         <div>
           <p style={{fontSize:9,color,fontWeight:900,letterSpacing:1.7,textTransform:'uppercase',margin:'0 0 4px'}}>{skating.brand}</p>
@@ -41,7 +41,7 @@ export default function SkatePanel({game, color}) {
         </span>
       </div>
 
-      <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:6,marginBottom:9}}>
+      <div className="skate-stat-grid">
         {statRows.map(([label,value]) => (
           <div key={label} style={{minWidth:0,border:`1px solid ${color}20`,borderRadius:9,padding:'6px 7px',background:`${color}08`}}>
             <p style={{fontSize:8,color:C.faint,margin:'0 0 2px'}}>{label}</p>
