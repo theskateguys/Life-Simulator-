@@ -45,7 +45,18 @@ const ACTION_PROMISES = {
   quality:'Increase trust by raising the standard.',
   business_finance:'Make the business cleaner, calmer, and more controlled.',
   renovate:'Put care into property and increase value.',
-  sell_property:'Trade an asset for cash and less pressure.'
+  sell_property:'Trade an asset for cash and less pressure.',
+  buy_starter_skates:'Open the Skate Life path with your first pair and a clean beginner start.',
+  buy_protective_kit:'Add the basic safety gear needed for harder skate sessions.',
+  beginner_skate_class:'Build the foundation: balance, stops, technique, and confidence.',
+  skate_conditioning:'Use skating drills to grow fitness, agility, and control.',
+  skate_guys_jam:'Join The Skate Guys circle and turn practice into community.',
+  service_skates:'Restore gear condition so your setup stays safe and smooth.',
+  unlock_recreation_jam:'Choose the social, stylish, joy-first skating path.',
+  unlock_artistic:'Choose routines, presentation, and showmanship.',
+  unlock_speed:'Choose endurance, racing, and timed performance.',
+  unlock_roller_derby:'Choose a team contact-sport path with clear safety demands.',
+  unlock_slalom_park:'Choose cones, flow, tricks, and park-style control.'
 };
 
 const STAT_NAMES = {
@@ -61,6 +72,7 @@ const STAT_NAMES = {
 };
 
 function payoffText(action) {
+  if (action.special?.startsWith('skating_')) return 'Builds your Skate Life path';
   if (action.special?.includes('business')) return 'Can grow your business path';
   if (action.special?.includes('property')) return 'Can change your asset story';
   if (action.special?.includes('fame') || action.special === 'post_content') return 'Can grow your audience';

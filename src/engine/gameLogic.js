@@ -1,6 +1,6 @@
 import {
   ACHIEVEMENTS, ACTION_CATEGORIES, BACKGROUNDS, BRAND_DEALS, BUSINESS_ACTIONS, CAREERS, CONTEXT_EVENTS,
-  FAME_LEVELS, ISLANDS, PROPERTY_ACTIONS, PROVERBS, RANDOM_LIFE_EVENTS, SKILLS, generateName
+  FAME_LEVELS, ISLANDS, PROPERTY_ACTIONS, PROVERBS, RANDOM_LIFE_EVENTS, SKATING_DISCIPLINES, SKILLS, generateName
 } from '../data/gameData.js';
 
 export const YEAR_FOCUS = 10;
@@ -44,6 +44,37 @@ export function defaultSkills(bonus = {}) {
     leadership:bonus.workEthic ? 4 : 0,
     fitness:0
   };
+}
+
+export function defaultSkatingState() {
+  return {
+    unlocked:false,
+    brand:'The Skate Guys',
+    primaryDiscipline:null,
+    disciplinesUnlocked:[],
+    stats:{balance:0, agility:0, technique:0, confidence:0},
+    gear:{skates:false, helmet:false, pads:false, wristGuards:false, mouthguard:false, condition:0},
+    reputation:0,
+    certifications:[],
+    flags:[]
+  };
+}
+
+export function normalizeSkatingState(skating = {}) {
+  const defaults = defaultSkatingState();
+  return {
+    ...defaults,
+    ...skating,
+    disciplinesUnlocked:Array.isArray(skating.disciplinesUnlocked) ? [...skating.disciplinesUnlocked] : [],
+    stats:{...defaults.stats, ...(skating.stats || {})},
+    gear:{...defaults.gear, ...(skating.gear || {})},
+    certifications:Array.isArray(skating.certifications) ? [...skating.certifications] : [],
+    flags:Array.isArray(skating.flags) ? [...skating.flags] : []
+  };
+}
+
+function normalizeGameState(game) {
+  return {...game, skating:normalizeSkatingState(game.skating)};
 }
 
 export function createInitialGame({ islandId, backgroundId, name, preference, goalId = 'own_path', themeMode = 'sleek', avatarId = 'youth_neutral' }) {
@@ -99,6 +130,7 @@ export function createInitialGame({ islandId, backgroundId, name, preference, go
     damian:{name:generateName('m', islandId), wealth:5000, career:'employee', businessLevel:0, relationship:'rival', age:18},
     addictions:{rum:0, gambling:0},
     followers:0,
+    skating:defaultSkatingState(),
     migration:null,
     yearLog:[],
     yearLims:{},
@@ -131,24 +163,25 @@ function getMigrationMultiplier(game) {
 }
 
 export function refreshFinance(game) {
-  const island = islandById(game.islandId);
-  const background = backgroundById(game.backgroundId);
-  const f = {...game.finance};
-  const career = careerLabel(game.career);
-  const levelMultiplier = 1 + game.careerLevel * 0.16;
-  const careerIncome = career.base * island.incomeMultiplier * levelMultiplier * getMigrationMultiplier(game);
-  const businessNet = game.business.active ? Math.max(0, f.businessRevenue - f.businessExpenses) : 0;
-  const rentalIncome = game.properties.filter(p => p.kind === 'rental').length * island.rentalIncome;
+  const base = normalizeGameState(game);
+  const island = islandById(base.islandId);
+  const background = backgroundById(base.backgroundId);
+  const f = {...base.finance};
+  const career = careerLabel(base.career);
+  const levelMultiplier = 1 + base.careerLevel * 0.16;
+  const careerIncome = career.base * island.incomeMultiplier * levelMultiplier * getMigrationMultiplier(base);
+  const businessNet = base.business.active ? Math.max(0, f.businessRevenue - f.businessExpenses) : 0;
+  const rentalIncome = base.properties.filter(p => p.kind === 'rental').length * island.rentalIncome;
   const contractIncome = f.contracts.reduce((total, contract) => total + (contract.annual || 0) / 12, 0);
   const mortgage = monthlyPayment(f.mortgageDebt, 0.07, 20);
   const loan = monthlyPayment(f.loanDebt, 0.08, 10);
   const baseExpenses = island.monthlyEssentials * background.monthlyModifier;
-  const familyExpenses = game.children.length * 145 + (game.partner ? 110 : 0);
+  const familyExpenses = base.children.length * 145 + (base.partner ? 110 : 0);
   const monthlyIncome = Math.round(careerIncome + businessNet + rentalIncome + contractIncome);
   const monthlyExpenses = Math.round(baseExpenses + familyExpenses + mortgage + loan);
-  const propertyValue = Math.round(game.properties.reduce((total, property) => total + property.value, 0));
+  const propertyValue = Math.round(base.properties.reduce((total, property) => total + property.value, 0));
   return {
-    ...game,
+    ...base,
     finance:{
       ...f,
       monthlyIncome,
@@ -222,6 +255,53 @@ function applyVice(game, type, amount) {
   const next = {...game, addictions:{...game.addictions}};
   next.addictions[type] = clamp((next.addictions[type] || 0) + amount);
   return next;
+}
+
+const SKATING_GEAR_LABELS = {
+  skates:'Starter Skates',
+  helmet:'helmet',
+  pads:'pads',
+  wristGuards:'wrist guards',
+  mouthguard:'mouthguard'
+};
+
+const SKATING_FLAG_LABELS = {
+  beginner_progression:'Complete Beginner Class Block first'
+};
+
+function disciplineLabel(id) {
+  return SKATING_DISCIPLINES.find(item => item.id === id)?.label || 'Skate discipline';
+}
+
+function updateSkating(game, updater) {
+  const skating = normalizeSkatingState(game.skating);
+  return {...game, skating:normalizeSkatingState(updater(skating))};
+}
+
+function addSkatingFlag(skating, flag) {
+  return skating.flags.includes(flag) ? skating : {...skating, flags:[...skating.flags, flag]};
+}
+
+function applySkatingStats(game, stats = {}) {
+  return updateSkating(game, skating => ({
+    ...skating,
+    stats:Object.fromEntries(Object.entries(skating.stats).map(([key, value]) => [key, clamp(value + (stats[key] || 0))]))
+  }));
+}
+
+function applySkatingReputation(game, amount = 0) {
+  return updateSkating(game, skating => ({...skating, reputation:clamp(skating.reputation + amount)}));
+}
+
+function wearSkates(game, amount) {
+  return updateSkating(game, skating => ({
+    ...skating,
+    gear:{...skating.gear, condition:clamp((skating.gear.condition || 0) - amount)}
+  }));
+}
+
+function skatingActionTag(action) {
+  return action.id?.startsWith('unlock_') || action.id?.includes('skate') || action.special?.startsWith('skating_');
 }
 
 function applySpecial(game, action) {
@@ -356,6 +436,72 @@ function applySpecial(game, action) {
       }
       break;
     }
+    case 'skating_buy_starter': {
+      next = updateSkating(next, skating => addSkatingFlag({
+        ...skating,
+        unlocked:true,
+        gear:{...skating.gear, skates:true, condition:100},
+        stats:{...skating.stats, confidence:clamp(skating.stats.confidence + 6)}
+      }, 'action:buy_starter_skates'));
+      notices.push('Skate Life unlocked with Starter Skates from The Skate Guys circle.');
+      break;
+    }
+    case 'skating_buy_protective': {
+      next = updateSkating(next, skating => addSkatingFlag({
+        ...skating,
+        gear:{...skating.gear, helmet:true, pads:true, wristGuards:true},
+        stats:{...skating.stats, confidence:clamp(skating.stats.confidence + 2)}
+      }, 'action:buy_protective_kit'));
+      notices.push('Protective kit added: helmet, pads, and wrist guards.');
+      break;
+    }
+    case 'skating_beginner_class': {
+      next = applySkatingStats(next, {balance:12, technique:10, confidence:8});
+      next = wearSkates(next, 6);
+      next = updateSkating(next, skating => addSkatingFlag(addSkatingFlag(skating, 'beginner_progression'), 'action:beginner_skate_class'));
+      notices.push('Beginner progression completed with The Skate Guys foundation drills.');
+      break;
+    }
+    case 'skating_conditioning': {
+      next = applySkatingStats(next, {agility:9, balance:4});
+      next = wearSkates(next, 7);
+      next = updateSkating(next, skating => addSkatingFlag(skating, 'action:skate_conditioning'));
+      break;
+    }
+    case 'skating_community_jam': {
+      next = applySkatingStats(next, {confidence:10});
+      next = applySkatingReputation(next, 10);
+      next = wearSkates(next, 8);
+      next = updateSkating(next, skating => addSkatingFlag(skating, 'action:skate_guys_jam'));
+      notices.push('The Skate Guys community knows your face now.');
+      break;
+    }
+    case 'skating_service': {
+      next = updateSkating(next, skating => ({
+        ...addSkatingFlag(skating, 'action:service_skates'),
+        gear:{...skating.gear, condition:clamp((skating.gear.condition || 0) + 45)}
+      }));
+      notices.push('Skate condition restored with cleaned bearings and rotated wheels.');
+      break;
+    }
+    case 'skating_unlock_discipline': {
+      const disciplineId = action.disciplineId;
+      if (disciplineId) {
+        next = updateSkating(next, skating => {
+          const disciplinesUnlocked = skating.disciplinesUnlocked.includes(disciplineId) ? skating.disciplinesUnlocked : [...skating.disciplinesUnlocked, disciplineId];
+          return addSkatingFlag({
+            ...skating,
+            primaryDiscipline:disciplineId,
+            disciplinesUnlocked,
+            reputation:clamp(skating.reputation + 6),
+            stats:{...skating.stats, confidence:clamp(skating.stats.confidence + 6)}
+          }, `discipline:${disciplineId}`);
+        });
+        next = wearSkates(next, 4);
+        notices.push(`${disciplineLabel(disciplineId)} is now your primary Skate Life discipline.`);
+      }
+      break;
+    }
     case 'migration_event': return {game:next, forcedEvent:buildMigrationEvent(next), notices};
     default: break;
   }
@@ -364,6 +510,7 @@ function applySpecial(game, action) {
 
 export function getRequirementStatus(game, req = {}) {
   const island = islandById(game.islandId);
+  const skating = normalizeSkatingState(game.skating);
   const lines = [];
   let ok = true;
   const fail = (text) => {ok = false; lines.push(text);};
@@ -373,6 +520,25 @@ export function getRequirementStatus(game, req = {}) {
     if (game.finance.cash < deposit) fail(`Need ${fmt(deposit, island)} deposit · ${fmt(game.finance.cash, island)} available`);
   }
   if (req.skill) for (const [skill, value] of Object.entries(req.skill)) if ((game.skills[skill] || 0) < value) fail(`Need ${skill} ${value} · currently ${game.skills[skill] || 0}`);
+  if (req.skating) {
+    if (req.skating.unlocked && !skating.unlocked) fail('Need Starter Skates');
+    if (req.skating.gear?.length) {
+      const missing = req.skating.gear.filter(item => !skating.gear[item]);
+      if (missing.length) {
+        if (req.skating.gear.includes('helmet') && req.skating.gear.includes('pads') && req.skating.gear.includes('wristGuards')) fail('Need helmet, pads, and wrist guards for Roller Derby');
+        else missing.forEach(item => fail(item === 'skates' ? 'Need Starter Skates' : `Need ${SKATING_GEAR_LABELS[item] || item}`));
+      }
+    }
+    if (req.skating.stats) {
+      for (const [stat, value] of Object.entries(req.skating.stats)) {
+        const current = skating.stats[stat] || 0;
+        if (current < value) fail(`Need ${stat[0].toUpperCase()}${stat.slice(1)} ${value} · currently ${current}`);
+      }
+    }
+    if (req.skating.flags) {
+      for (const flag of req.skating.flags) if (!skating.flags.includes(flag)) fail(SKATING_FLAG_LABELS[flag] || `Need skating step: ${flag}`);
+    }
+  }
   if (req.business && !game.business.active) fail('Start a business first');
   if (req.property && game.properties.length < 1) fail('Own at least 1 property');
   if (req.addiction && Object.values(game.addictions).every(v => v < 20)) fail('Available when an addiction reaches 20%');
@@ -420,6 +586,7 @@ function eventRequirementsMet(game, event) {
   if (event.req?.followers && game.followers < event.req.followers) return false;
   if (event.req?.stressHigh && game.stats.stress < event.req.stressHigh) return false;
   if (event.req?.healthLow && game.stats.health > event.req.healthLow) return false;
+  if (event.req?.skating && !getRequirementStatus(game, {skating:event.req.skating}).ok) return false;
   return true;
 }
 
@@ -549,6 +716,7 @@ export function applyAction(game, action) {
   next = record(next, action);
   const special = applySpecial(next, action);
   next = special.game;
+  if (skatingActionTag(action)) next = updateSkating(next, skating => addSkatingFlag(skating, `used:${action.id}`));
   if (next.career === 'none') {
     next = {...next, career:'employee'};
   } else if (next.career === 'employee') {
@@ -591,6 +759,19 @@ function applyEventSpecial(game, choice) {
       break;
     }
     case 'decline_brand': next = addFlag(next, `declined:${choice.dealId}`); break;
+    case 'skate_invite_join':
+      next = applySkatingStats(next, {confidence:8, balance:4});
+      next = applySkatingReputation(next, 10);
+      next = wearSkates(next, 5);
+      break;
+    case 'skate_invite_volunteer':
+      next = applySkatingStats(next, {confidence:6, technique:4});
+      next = applySkatingReputation(next, 14);
+      break;
+    case 'skate_invite_watch':
+      next = applySkatingStats(next, {technique:5, confidence:3});
+      next = applySkatingReputation(next, 4);
+      break;
     default: break;
   }
   return refreshFinance(next);
@@ -797,8 +978,9 @@ export function endYear(game) {
 }
 
 export function nextYear(game) {
+  const base = normalizeGameState(game);
   const nextAge = game.age + 1;
-  return {...game, age:nextAge, yearLog:[], yearLims:{}, yearFocus:0, yearReview:null};
+  return {...base, age:nextAge, yearLog:[], yearLims:{}, yearFocus:0, yearReview:null};
 }
 
 export function startNextGeneration(game, heir) {
@@ -818,7 +1000,7 @@ export function startNextGeneration(game, heir) {
     flags:[`generation:${game.generation + 1}`], achievements:[], family:generateFamily(game.islandId, game.backgroundId), partner:null, children:[], lastBirthAge:null,
     addictions:{rum:0,gambling:0}, followers:0, migration:null, yearLog:[], yearLims:{}, yearFocus:0, yearReview:null
   };
-  return refreshFinance(newGame);
+  return refreshFinance({...newGame, skating:defaultSkatingState()});
 }
 
 export function saveGame(game) {

@@ -11,6 +11,7 @@ import ActionCard from './components/ActionCard.jsx';
 import FinancePanel from './components/FinancePanel.jsx';
 import FamilyPanel from './components/FamilyPanel.jsx';
 import YearReview from './components/YearReview.jsx';
+import SkatePanel from './components/SkatePanel.jsx';
 import moneySavingsSticker from './assets/stickers/money-savings.png';
 import propertyHomeKeySticker from './assets/stickers/property-home-key.png';
 import businessStorefrontSticker from './assets/stickers/business-storefront.png';
@@ -107,7 +108,18 @@ const ACTION_STORIES = {
   quality:'You raised the standard. That kind of care compounds quietly.',
   business_finance:'You brought order to the money side of the business.',
   renovate:'You put value back into the property with every repair.',
-  sell_property:'You let go of an asset and turned it into breathing room.'
+  sell_property:'You let go of an asset and turned it into breathing room.',
+  buy_starter_skates:'The first pair changed the shape of the year. The court suddenly looked like a doorway.',
+  buy_protective_kit:'The gear made the next moves feel less reckless and more intentional.',
+  beginner_skate_class:'Falls became feedback. Stops became control. The basics started becoming yours.',
+  skate_conditioning:'The drills were simple, but your balance and stamina started answering back.',
+  skate_guys_jam:'Music, wheels, and people turned practice into community. The Skate Guys noticed you showed up.',
+  service_skates:'Clean bearings and rotated wheels made the setup feel ready again.',
+  unlock_recreation_jam:'You chose the social rhythm of skating: style, joy, and connection.',
+  unlock_artistic:'You chose a path where movement has presentation and every line matters.',
+  unlock_speed:'You chose pace, endurance, and the pressure of timed performance.',
+  unlock_roller_derby:'You chose a team path with contact, trust, and safety built into the work.',
+  unlock_slalom_park:'You chose flow, cones, tricks, and control that people stop to watch.'
 };
 
 function actionStory(action, game, island) {
@@ -123,6 +135,7 @@ const CATEGORY_STORIES = {
   money:{promise:'Build the cash, assets, and habits that create freedom.', vibe:'Wealth moves'},
   health:{promise:'Protect the body and mind carrying the whole story.', vibe:'Recovery arc'},
   life:{promise:'Choose love, culture, community, faith, and joy.', vibe:'Heart of life'},
+  skate:{promise:'Build skill, rhythm, gear, and community with The Skate Guys.', vibe:'Skate circle'},
   damian:{promise:'Face comparison, rivalry, and old history directly.', vibe:'Drama chapter'},
   business:{promise:'Grow the systems, quality, and reach of your business.', vibe:'Owner mode'},
   property:{promise:'Manage assets that can change your long-term life.', vibe:'Asset chapter'}
@@ -550,6 +563,8 @@ export default function App() {
           <p style={{fontSize:12,color:C.text,lineHeight:1.5,fontWeight:800,margin:'0 0 9px'}}>{priority.text}</p>
           <div className="priority-goals">{priority.goals.slice(0,3).map(goal=><span key={goal}><i aria-hidden="true" />{goal}</span>)}</div>
         </section>
+
+        <SkatePanel game={game} color={theme.primary} />
 
         {game.stats.health<25 && <div className="story-panel" style={{padding:'10px 12px',borderColor:`${C.coral}55`,marginTop:10}}><p style={{fontSize:11,color:C.coral,fontWeight:900,margin:0}}>Health is critical. Your body needs immediate attention.</p></div>}
         {game.stats.stress>75 && <div className="story-panel" style={{padding:'10px 12px',borderColor:`${C.gold}55`,marginTop:10}}><p style={{fontSize:11,color:C.gold,fontWeight:900,margin:0}}>Stress is extreme. Recovery is a strategic decision now.</p></div>}

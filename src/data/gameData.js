@@ -172,6 +172,28 @@ export const ACHIEVEMENTS = [
 
 const a = (id,label,emoji,desc,cost,lk,ym,changes={},skills={},special=null,req={}) => ({id,label,emoji,desc,cost,lk,ym,changes,skills,special,req});
 
+export const SKATING_DISCIPLINES = [
+  {id:'recreation_jam', label:'Recreation & Jam', focus:'community, style, performance, joy'},
+  {id:'artistic', label:'Artistic', focus:'presentation, routines, showmanship'},
+  {id:'speed', label:'Speed', focus:'endurance, timed performance, racing'},
+  {id:'roller_derby', label:'Roller Derby', focus:'team identity, leadership, tactics'},
+  {id:'slalom_park', label:'Slalom & Park', focus:'cones, flow, tricks, content'}
+];
+
+export const SKATING_ACTIONS = [
+  a('buy_starter_skates','Buy Starter Skates','🛼','Start the Skate Life path with a basic pair from The Skate Guys circle.',1,'buy_starter_skates',1,{cash:-450}, {}, 'skating_buy_starter', {age:18,cash:450}),
+  a('buy_protective_kit','Buy Protective Kit','🪖','Add helmet, pads, and wrist guards before harder sessions.',1,'buy_protective_kit',1,{cash:-220}, {}, 'skating_buy_protective', {cash:220,skating:{gear:['skates']}}),
+  a('beginner_skate_class','Complete Beginner Class Block','📚','Learn stops, balance, edges, and safe falling with beginner coaching.',1,'beginner_skate_class',3,{cash:-180,stress:3}, {}, 'skating_beginner_class', {cash:180,skating:{gear:['skates']}}),
+  a('skate_conditioning','Skate Conditioning Session','💪','Build fitness, balance, and agility with controlled drills.',1,'skate_conditioning',4,{cash:-80,health:4,stress:-7}, {fitness:8}, 'skating_conditioning', {cash:80,skating:{gear:['skates']}}),
+  a('skate_guys_jam','Attend The Skate Guys Community Jam','🎧','Join a smooth court session where skills, music, and people meet.',1,'skate_guys_jam',2,{cash:-120,happiness:16,relationships:10,communityStanding:8}, {}, 'skating_community_jam', {cash:120,skating:{gear:['skates'],stats:{balance:15}}}),
+  a('service_skates','Service Skates: Rotate Wheels and Clean Bearings','🔧','Keep the wheels rolling safely by restoring gear condition.',0,'service_skates',2,{cash:-70}, {}, 'skating_service', {cash:70,skating:{gear:['skates']}}),
+  {...a('unlock_recreation_jam','Choose Recreation & Jam','🌴','Make skating your social, stylish, joy-first discipline.',1,'unlock_recreation_jam',1,{happiness:8,relationships:5}, {}, 'skating_unlock_discipline', {skating:{flags:['beginner_progression']}}), disciplineId:'recreation_jam'},
+  {...a('unlock_artistic','Choose Artistic','🎭','Work toward routines, presentation, and showmanship.',1,'unlock_artistic',1,{happiness:8}, {}, 'skating_unlock_discipline', {skating:{stats:{balance:35,technique:35}}}), disciplineId:'artistic'},
+  {...a('unlock_speed','Choose Speed','⚡','Train for endurance, timed performance, and racing.',1,'unlock_speed',1,{workEthic:6,stress:5}, {}, 'skating_unlock_discipline', {skill:{fitness:35},skating:{stats:{technique:30}}}), disciplineId:'speed'},
+  {...a('unlock_roller_derby','Choose Roller Derby','🛡️','A contact-sport path. Full protective kit is required before team tactics.',1,'unlock_roller_derby',1,{relationships:6,workEthic:6,stress:8}, {}, 'skating_unlock_discipline', {skating:{stats:{agility:30,confidence:35},gear:['helmet','pads','wristGuards']}}), disciplineId:'roller_derby'},
+  {...a('unlock_slalom_park','Choose Slalom & Park','🌀','Build cones, flow, tricks, and content-friendly skate control.',1,'unlock_slalom_park',1,{happiness:7,stress:4}, {}, 'skating_unlock_discipline', {skating:{stats:{agility:30,balance:30}}}), disciplineId:'slalom_park'}
+];
+
 export const ACTION_CATEGORIES = [
   {id:'learn', label:'LEARN', emoji:'📚', color:C.turquoise, tag:'Develop skills that open doors.', items:[
     a('study_cooking','Study Cooking','🍳','Deep culinary practice for a food path.',1,'cooking',4,{stress:3},{cooking:20}),
@@ -223,6 +245,7 @@ export const ACTION_CATEGORIES = [
     a('love','Make Space for Love','💕','Meet someone new or invest in your relationship.',1,'love',2,{happiness:10,relationships:8},{},'love',{age:22,romance:true}),
     a('child','Plan for a Child','🧒','Choose parenthood deliberately, not repeatedly in one year.',1,'child',1,{happiness:13,stress:8,relationships:9},{},'have_child',{partner:true,age:20,noChildThisYear:true})
   ]},
+  {id:'skate', label:'SKATE LIFE', emoji:'🛼', color:C.turquoise, tag:'Build skill, confidence, gear, and community with The Skate Guys.', items:SKATING_ACTIONS},
   {id:'damian', label:'DAMIAN', emoji:'👀', color:C.violet, tag:'A rival, ally, or chapter you close.', items:[
     a('damian_contact','Reach Out to Damian','📱','Check in without making comparison your identity.',0,'damian_contact',1,{relationships:5},{},'damian_contact'),
     a('damian_compete','Compete Directly','⚔️','Go head-to-head in business or career.',1,'damian_compete',1,{stress:12,workEthic:10},{leadership:6},'damian_compete'),
@@ -310,6 +333,16 @@ export const CONTEXT_EVENTS = [
    choices:[
     {label:'🎥 Build a content system', result:'You turned attention into a repeatable routine instead of chasing one moment.', changes:{stress:8,creative:8}, fame:8000},
     {label:'💰 Take a quick sponsored post', result:'You earned from the moment, but some followers felt the fit was rushed.', changes:{cash:1800,integrity:-4}, fame:3000}
+   ]},
+
+  {id:'skate_guys_invite', tags:['buy_starter_skates','beginner_skate_class','skate_conditioning','skate_guys_jam','service_skates'], min:2, title:'The Skate Guys Invite', icon:'🛼', category:'SKATE LIFE', accent:C.turquoise,
+   req:{skating:{gear:['skates']}},
+   story:'The Skate Guys invite you to a community session on a smooth court space. Music is running, beginners are watching, and the regulars are making room for anyone serious enough to learn.',
+   tip:'Community skating grows through presence. Showing up, helping, and learning safely all build reputation.',
+   choices:[
+    {label:'Join the session and network', result:'You rolled into the session, found rhythm, and left with names, confidence, and a stronger place in the skate circle.', changes:{happiness:14,relationships:12,communityStanding:8,cash:-60}, special:'skate_invite_join'},
+    {label:'Volunteer to help beginners', result:'You helped new skaters stand, stop, and laugh at the awkward first steps. The community noticed your patience.', changes:{relationships:16,communityStanding:14,happiness:10,cash:120}, special:'skate_invite_volunteer'},
+    {label:'Watch and learn first', result:'You studied the flow, asked good questions, and left more ready than when you arrived.', changes:{intelligence:6,stress:-5,happiness:6}, special:'skate_invite_watch'}
    ]},
 
 // ─── FROM FRIENDS ────────────────────────────────────────────────────────────

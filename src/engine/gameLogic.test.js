@@ -26,6 +26,15 @@ function fixtureGame(overrides = {}) {
     business:{...base.business, ...(overrides.business || {})},
     properties:overrides.properties || base.properties,
     children:overrides.children || base.children,
+    skating:overrides.skating ? {
+      ...base.skating,
+      ...overrides.skating,
+      stats:{...base.skating.stats, ...(overrides.skating.stats || {})},
+      gear:{...base.skating.gear, ...(overrides.skating.gear || {})},
+      disciplinesUnlocked:overrides.skating.disciplinesUnlocked || base.skating.disciplinesUnlocked,
+      certifications:overrides.skating.certifications || base.skating.certifications,
+      flags:overrides.skating.flags || base.skating.flags
+    } : base.skating,
     yearLims:overrides.yearLims || base.yearLims,
     yearLog:overrides.yearLog || base.yearLog
   });
@@ -133,5 +142,92 @@ describe('core game-engine regression rules', () => {
     expect(result.game).not.toBe(game);
     expect(game).toEqual(before);
     expect(result.game.finance.cash).toBe(Math.max(0, before.finance.cash + annualNet));
+  });
+
+  it('normalizes older saved game state without skating safely', () => {
+    const base = fixtureGame();
+    const {skating, ...olderGame} = base;
+
+    const normalized = refreshFinance(olderGame);
+
+    expect(skating).toBeDefined();
+    expect(normalized.skating.brand).toBe('The Skate Guys');
+    expect(normalized.skating.unlocked).toBe(false);
+    expect(normalized.skating.stats.balance).toBe(0);
+    expect(normalized.skating.gear.condition).toBe(0);
+    expect(olderGame.skating).toBeUndefined();
+  });
+
+  it('buys starter skates, unlocks skating, sets condition, and deducts cash once', () => {
+    const game = fixtureGame({finance:{cash:5000}});
+    const result = applyAction(game, action('buy_starter_skates')).game;
+
+    expect(result.skating.unlocked).toBe(true);
+    expect(result.skating.gear.skates).toBe(true);
+    expect(result.skating.gear.condition).toBe(100);
+    expect(game.finance.cash - result.finance.cash).toBe(450);
+    expect(game.finance.cash - result.finance.cash).not.toBe(900);
+  });
+
+  it('blocks beginner skate class without starter skates', () => {
+    const status = canUseAction(fixtureGame({finance:{cash:5000}}), action('beginner_skate_class'));
+
+    expect(status.ok).toBe(false);
+    expect(status.lines).toContain('Need Starter Skates');
+  });
+
+  it('services skates without exceeding full gear condition', () => {
+    const game = fixtureGame({
+      finance:{cash:5000},
+      skating:{unlocked:true, gear:{skates:true, condition:80}}
+    });
+
+    const result = applyAction(game, action('service_skates')).game;
+
+    expect(result.skating.gear.condition).toBe(100);
+    expect(game.finance.cash - result.finance.cash).toBe(70);
+  });
+
+  it('keeps Roller Derby locked without full protective gear and required stats', () => {
+    const status = canUseAction(fixtureGame({
+      skating:{unlocked:true, gear:{skates:true, condition:100}}
+    }), action('unlock_roller_derby'));
+
+    expect(status.ok).toBe(false);
+    expect(status.lines).toContain('Need helmet, pads, and wrist guards for Roller Derby');
+    expect(status.lines).toContain('Need Agility 30 · currently 0');
+    expect(status.lines).toContain('Need Confidence 35 · currently 0');
+  });
+
+  it('unlocks a skating discipline once and sets it as primary', () => {
+    const game = fixtureGame({
+      skating:{unlocked:true, gear:{skates:true, condition:100}, stats:{balance:40, technique:40}}
+    });
+    const first = applyAction(game, action('unlock_artistic')).game;
+    const second = applyAction({...first, yearFocus:0, yearLims:{}}, action('unlock_artistic')).game;
+
+    expect(first.skating.primaryDiscipline).toBe('artistic');
+    expect(first.skating.disciplinesUnlocked).toContain('artistic');
+    expect(second.skating.primaryDiscipline).toBe('artistic');
+    expect(second.skating.disciplinesUnlocked.filter(id => id === 'artistic')).toHaveLength(1);
+  });
+
+  it('triggers The Skate Guys invite only when skating requirements are met', () => {
+    const noSkates = fixtureGame({
+      yearFocus:2,
+      yearLog:[
+        {id:'beginner_skate_class', label:'Class', cost:1},
+        {id:'skate_conditioning', label:'Conditioning', cost:1}
+      ],
+      finance:{cash:5000}
+    });
+    const blocked = applyAction(noSkates, action('study_cooking'));
+    expect(blocked.event?.id).not.toBe('skate_guys_invite');
+
+    const started = applyAction(fixtureGame({finance:{cash:5000}}), action('buy_starter_skates')).game;
+    const classed = applyAction(started, action('beginner_skate_class')).game;
+    const invited = applyAction(classed, action('skate_conditioning'));
+
+    expect(invited.event?.id).toBe('skate_guys_invite');
   });
 });
