@@ -1,6 +1,13 @@
 name: Phase 1 stability runner
 
 on:
+  pull_request:
+    branches:
+      - main
+    types:
+      - opened
+      - synchronize
+      - reopened
   push:
     branches:
       - main
