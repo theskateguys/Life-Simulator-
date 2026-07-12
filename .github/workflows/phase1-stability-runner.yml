@@ -62,7 +62,7 @@ jobs:
       - name: Record validated patch
         shell: bash
         run: |
-          rm -f scripts/phase1_cleanup.py scripts/fix_test_naming.py .github/workflows/phase1-stability-cleanup.yml
+          rm -f scripts/phase1_cleanup.py scripts/fix_test_naming.py
           rmdir scripts 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
