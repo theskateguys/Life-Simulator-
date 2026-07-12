@@ -1,0 +1,62 @@
+name: Phase 1 stability runner
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - .github/workflows/phase1-stability-runner.yml
+
+permissions:
+  contents: write
+
+jobs:
+  validate-cleanup-branch:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/phase-1-stability-cleanup
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Apply approved patch
+        run: python scripts/phase1_cleanup.py
+
+      - name: Install validation dependencies
+        run: npm install --save-dev eslint globals @playwright/test
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run production build
+        run: npm run build
+
+      - name: Run Playwright smoke test
+        run: npm run test:e2e
+
+      - name: Record validated patch
+        shell: bash
+        run: |
+          rm -f scripts/phase1_cleanup.py .github/workflows/phase1-stability-cleanup.yml
+          rmdir scripts 2>/dev/null || true
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Complete Phase 1 stability cleanup"
+          git push origin HEAD:agent/phase-1-stability-cleanup
