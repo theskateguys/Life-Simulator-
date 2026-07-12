@@ -1,0 +1,394 @@
+name: Phase 1 stability cleanup
+
+on:
+  push:
+    branches:
+      - agent/phase-1-stability-cleanup
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-validate:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out cleanup branch
+        uses: actions/checkout@v4
+        with:
+          ref: agent/phase-1-stability-cleanup
+          fetch-depth: 0
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Apply approved stability patch
+        shell: bash
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import json
+          import struct
+          import zlib
+
+          def replace_once(path, old, new):
+              file = Path(path)
+              text = file.read_text(encoding='utf-8')
+              if old not in text:
+                  raise SystemExit(f'Expected text not found in {path}: {old[:100]!r}')
+              file.write_text(text.replace(old, new, 1), encoding='utf-8')
+
+          # Favicon declaration.
+          replace_once(
+              'index.html',
+              '    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n',
+              '    <meta name="viewport" content="width=device-width, initial-scale=1.0" />\n    <link rel="icon" href="%BASE_URL%favicon.ico" sizes="any" />\n'
+          )
+
+          # Ignore generated browser-test outputs.
+          gitignore = Path('.gitignore')
+          ignored = gitignore.read_text(encoding='utf-8').rstrip() + '\n'
+          for entry in ('playwright-report/', 'test-results/'):
+              if entry not in ignored.splitlines():
+                  ignored += entry + '\n'
+          gitignore.write_text(ignored, encoding='utf-8')
+
+          # Add scripts without changing existing dependency declarations here;
+          # npm install below writes exact dependency and lockfile changes.
+          package_path = Path('package.json')
+          package = json.loads(package_path.read_text(encoding='utf-8'))
+          package['scripts']['dev:test'] = 'vite --host 127.0.0.1 --port 4173'
+          package['scripts']['lint'] = 'eslint . --max-warnings=0'
+          package['scripts']['test:e2e'] = 'playwright test'
+          package['scripts']['check'] = 'npm run lint && npm test && npm run build && npm run test:e2e'
+          package_path.write_text(json.dumps(package, indent=2) + '\n', encoding='utf-8')
+
+          # Render existing flag data through reliable local assets or country-code fallbacks.
+          replace_once(
+              'src/App.jsx',
+              "import SkatePanel from './components/SkatePanel.jsx';\n",
+              "import SkatePanel from './components/SkatePanel.jsx';\nimport FlagDisplay from './components/FlagDisplay.jsx';\n"
+          )
+          replace_once(
+              'src/App.jsx',
+              '<span style={{fontSize:28}}>{entry.flag}</span>',
+              '<FlagDisplay flag={entry.flag} label={entry.name} size={28} />'
+          )
+          replace_once(
+              'src/App.jsx',
+              'Pick a simple face for your character. We can make this deeper later.',
+              'Choose the look that best fits your character.'
+          )
+          replace_once(
+              'src/App.jsx',
+              '<div style={{fontSize:48}}>{island.flag}</div>',
+              '<div style={{fontSize:48}}><FlagDisplay flag={island.flag} label={island.name} size={48} /></div>'
+          )
+          replace_once(
+              'src/App.jsx',
+              '<span className="flag-chip">{island.flag}</span>',
+              '<span className="flag-chip"><FlagDisplay flag={island.flag} label={island.name} size={16} /></span>'
+          )
+
+          replace_once(
+              'src/components/Modal.jsx',
+              "import dangerStormSticker from '../assets/stickers/danger-storm.png';\n",
+              "import dangerStormSticker from '../assets/stickers/danger-storm.png';\nimport { FlagLabel } from './FlagDisplay.jsx';\n"
+          )
+          replace_once(
+              'src/components/Modal.jsx',
+              "<span style={{display:'block',fontWeight:800,fontSize:12,lineHeight:1.5}}>{choice.label}</span>",
+              "<span style={{display:'block',fontWeight:800,fontSize:12,lineHeight:1.5}}><FlagLabel text={choice.label} /></span>"
+          )
+
+          Path('src/utils').mkdir(parents=True, exist_ok=True)
+          Path('src/utils/flagDisplay.js').write_text("""const FLAG_METADATA = Object.freeze({
+            '🇯🇲': { code: 'JM', asset: 'flags/jamaica.svg' },
+            '🇹🇹': { code: 'TT', asset: 'flags/trinidad-and-tobago.svg' },
+            '🇧🇧': { code: 'BB', asset: 'flags/barbados.svg' },
+            '🇩🇴': { code: 'DO', asset: 'flags/dominican-republic.svg' },
+            '🇱🇨': { code: 'LC', asset: 'flags/saint-lucia.svg' },
+            '🇨🇦': { code: 'CA' },
+            '🇬🇧': { code: 'UK' },
+            '🇺🇸': { code: 'US' }
+          });
+
+          function isRegionalIndicator(character) {
+            const codePoint = character?.codePointAt(0);
+            return codePoint >= 0x1F1E6 && codePoint <= 0x1F1FF;
+          }
+
+          export function getFlagDisplay(flag) {
+            return FLAG_METADATA[flag] || null;
+          }
+
+          export function splitLeadingFlag(text = '') {
+            const characters = [...text];
+            if (characters.length < 2 || !isRegionalIndicator(characters[0]) || !isRegionalIndicator(characters[1])) return null;
+
+            const flag = characters.slice(0, 2).join('');
+            const display = getFlagDisplay(flag);
+            if (!display) return null;
+
+            return {
+              flag,
+              label: characters.slice(2).join('').trimStart(),
+              ...display
+            };
+          }
+          """, encoding='utf-8')
+
+          Path('src/components/FlagDisplay.jsx').write_text("""import { useState } from 'react';
+          import { getFlagDisplay, splitLeadingFlag } from '../utils/flagDisplay.js';
+
+          function FlagFallback({ code, label, size }) {
+            return (
+              <span
+                role="img"
+                aria-label={`${label} flag fallback`}
+                style={{
+                  width:size,
+                  height:Math.round(size * 0.68),
+                  borderRadius:Math.max(3, Math.round(size * 0.14)),
+                  border:'1px solid rgba(255,255,255,.28)',
+                  background:'rgba(255,255,255,.10)',
+                  color:'inherit',
+                  display:'inline-flex',
+                  alignItems:'center',
+                  justifyContent:'center',
+                  flex:'0 0 auto',
+                  fontSize:Math.max(7, Math.round(size * 0.36)),
+                  fontWeight:900,
+                  lineHeight:1,
+                  letterSpacing:'.04em'
+                }}
+              >
+                {code}
+              </span>
+            );
+          }
+
+          export default function FlagDisplay({ flag, label = 'Country', size = 28 }) {
+            const [failed, setFailed] = useState(false);
+            const display = getFlagDisplay(flag);
+
+            if (!display) return <span aria-hidden="true" style={{fontSize:size,lineHeight:1}}>{flag}</span>;
+            if (!display.asset || failed) return <FlagFallback code={display.code} label={label} size={size} />;
+
+            return (
+              <img
+                src={`${import.meta.env.BASE_URL}${display.asset}`}
+                alt={`${label} flag`}
+                width={size}
+                height={Math.round(size * 0.68)}
+                onError={() => setFailed(true)}
+                style={{display:'inline-block',objectFit:'cover',borderRadius:Math.max(2,Math.round(size * 0.09)),boxShadow:'0 1px 4px rgba(0,0,0,.3)',flex:'0 0 auto'}}
+              />
+            );
+          }
+
+          export function FlagLabel({ text }) {
+            const parsed = splitLeadingFlag(text);
+            if (!parsed) return text;
+
+            return (
+              <span style={{display:'inline-flex',alignItems:'center',gap:7}}>
+                <FlagDisplay flag={parsed.flag} label={parsed.label || parsed.code} size={18} />
+                <span>{parsed.label}</span>
+              </span>
+            );
+          }
+          """, encoding='utf-8')
+
+          Path('src/utils/flagDisplay.test.js').write_text("""import { describe, expect, it } from 'vitest';
+          import { getFlagDisplay, splitLeadingFlag } from './flagDisplay.js';
+
+          describe('flag display metadata', () => {
+            it('maps playable island flags to local assets', () => {
+              expect(getFlagDisplay('🇯🇲')).toEqual({code:'JM', asset:'flags/jamaica.svg'});
+              expect(getFlagDisplay('🇹🇹')).toEqual({code:'TT', asset:'flags/trinidad-and-tobago.svg'});
+              expect(getFlagDisplay('🇧🇧')).toEqual({code:'BB', asset:'flags/barbados.svg'});
+              expect(getFlagDisplay('🇩🇴')).toEqual({code:'DO', asset:'flags/dominican-republic.svg'});
+              expect(getFlagDisplay('🇱🇨')).toEqual({code:'LC', asset:'flags/saint-lucia.svg'});
+            });
+
+            it('provides safe text fallbacks for migration flags', () => {
+              expect(getFlagDisplay('🇨🇦')).toEqual({code:'CA'});
+              expect(getFlagDisplay('🇬🇧')).toEqual({code:'UK'});
+              expect(getFlagDisplay('🇺🇸')).toEqual({code:'US'});
+            });
+
+            it('splits a leading country flag without altering the saved choice label', () => {
+              expect(splitLeadingFlag('🇨🇦 Canada pathway')).toEqual({flag:'🇨🇦', code:'CA', label:'Canada pathway'});
+              expect(splitLeadingFlag('🌴 Regional opportunity')).toBeNull();
+            });
+          });
+          """, encoding='utf-8')
+
+          Path('eslint.config.js').write_text("""import globals from 'globals';
+
+          export default [
+            {
+              ignores: ['dist/**', 'node_modules/**', 'playwright-report/**', 'test-results/**']
+            },
+            {
+              files: ['**/*.{js,jsx}'],
+              languageOptions: {
+                ecmaVersion: 'latest',
+                sourceType: 'module',
+                globals: {
+                  ...globals.browser,
+                  ...globals.node
+                },
+                parserOptions: {
+                  ecmaFeatures: { jsx: true }
+                }
+              },
+              rules: {
+                'no-undef': 'error',
+                'no-unreachable': 'error',
+                'no-dupe-keys': 'error',
+                'no-duplicate-case': 'error',
+                'no-func-assign': 'error',
+                'no-import-assign': 'error',
+                'no-self-assign': 'error'
+              }
+            }
+          ];
+          """, encoding='utf-8')
+
+          Path('playwright.config.js').write_text("""import { defineConfig, devices } from '@playwright/test';
+
+          export default defineConfig({
+            testDir: './tests',
+            timeout: 30_000,
+            expect: { timeout: 5_000 },
+            fullyParallel: true,
+            forbidOnly: Boolean(process.env.CI),
+            retries: process.env.CI ? 1 : 0,
+            reporter: process.env.CI ? 'line' : 'list',
+            use: {
+              baseURL: 'http://127.0.0.1:4173',
+              trace: 'retain-on-failure'
+            },
+            webServer: {
+              command: 'npm run dev:test',
+              url: 'http://127.0.0.1:4173',
+              reuseExistingServer: !process.env.CI
+            },
+            projects: [
+              {
+                name: 'chromium',
+                use: { ...devices['Desktop Chrome'] }
+              }
+            ]
+          });
+          """, encoding='utf-8')
+
+          Path('tests').mkdir(parents=True, exist_ok=True)
+          Path('tests/smoke.spec.js').write_text("""import { expect, test } from '@playwright/test';
+
+          test('title screen to setup flow to main gameplay', async ({ page }) => {
+            await page.goto('/');
+
+            await expect(page).toHaveTitle(/Island Life/i);
+            await expect(page.getByRole('heading', {name:'ISLAND LIFE'})).toBeVisible();
+            await page.getByRole('button', {name:/New Life/}).click();
+
+            await expect(page.getByRole('heading', {name:'This is your life story'})).toBeVisible();
+            await page.getByRole('button', {name:/Choose Island/}).click();
+
+            const jamaica = page.getByRole('button', {name:/Jamaica/});
+            const jamaicaFlag = jamaica.getByRole('img', {name:'Jamaica flag'});
+            await expect(jamaicaFlag).toBeVisible();
+            expect(await jamaicaFlag.evaluate(image => image.complete && image.naturalWidth > 0)).toBe(true);
+            await jamaica.click();
+
+            await expect(page.getByRole('heading', {name:'Choose Your Starting Point'})).toBeVisible();
+            await page.getByRole('button', {name:/Middle Class/}).click();
+
+            await expect(page.getByRole('heading', {name:'Start Your Story'})).toBeVisible();
+            await page.getByPlaceholder("Type your character's name").fill('Smoke Tester');
+            await page.getByRole('button', {name:/Begin in Jamaica/}).click();
+
+            const game = page.locator('.story-shell');
+            await expect(game).toBeVisible();
+            await expect(game).toContainText('Smoke Tester');
+            await expect(game).toContainText('Age 18 · Jamaica');
+            await expect(game).toContainText('Recommended chapters');
+          });
+          """, encoding='utf-8')
+
+          # Local SVG assets for playable islands.
+          flags = {
+            'jamaica.svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40"><rect width="60" height="40" fill="#009B3A"/><path d="M0 0 60 40M60 0 0 40" stroke="#FED100" stroke-width="10"/><path d="M0 0 30 20 0 40ZM60 0 30 20 60 40Z" fill="#000"/></svg>''',
+            'trinidad-and-tobago.svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40"><rect width="60" height="40" fill="#CE1126"/><path d="M-5-2 65 42" stroke="#fff" stroke-width="13"/><path d="M-5-2 65 42" stroke="#000" stroke-width="8"/></svg>''',
+            'barbados.svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40"><path fill="#00267F" d="M0 0h20v40H0zm40 0h20v40H40z"/><path fill="#FFC726" d="M20 0h20v40H20z"/><path fill="#000" d="M29 9h2v9l4-5-1 8-3 3v8h-2v-8l-3-3-1-8 4 5z"/></svg>''',
+            'dominican-republic.svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40"><path fill="#002D62" d="M0 0h25v15H0zm35 25h25v15H35z"/><path fill="#CE1126" d="M35 0h25v15H35zM0 25h25v15H0z"/><path fill="#fff" d="M25 0h10v40H25zM0 15h60v10H0z"/><circle cx="30" cy="20" r="3.5" fill="#00843D" stroke="#CE1126" stroke-width="1"/></svg>''',
+            'saint-lucia.svg': '''<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 40"><rect width="60" height="40" fill="#65CFFF"/><path d="M30 5 43 34H17Z" fill="#fff"/><path d="M30 8 39 31H21Z" fill="#000"/><path d="M30 18 39 34H21Z" fill="#FCD116"/></svg>'''
+          }
+          flag_dir = Path('public/flags')
+          flag_dir.mkdir(parents=True, exist_ok=True)
+          for name, svg in flags.items():
+              (flag_dir / name).write_text(svg + '\n', encoding='utf-8')
+
+          # Generate a real ICO file containing a 32x32 RGBA PNG.
+          width = height = 32
+          rows = []
+          for y in range(height):
+              row = bytearray([0])
+              for x in range(width):
+                  r, g, b, a = 5, 34, 31, 255
+                  if (x - 24) ** 2 + (y - 8) ** 2 <= 22:
+                      r, g, b = 255, 214, 10
+                  if y >= 23:
+                      r, g, b = 0, 174, 199
+                  if 14 <= x <= 16 and 8 <= y <= 25:
+                      r, g, b = 113, 78, 38
+                  if y <= 13 and abs(x - 15) <= (13 - y):
+                      r, g, b = 47, 214, 107
+                  row.extend((r, g, b, a))
+              rows.append(bytes(row))
+          raw = b''.join(rows)
+          def chunk(kind, data):
+              return struct.pack('>I', len(data)) + kind + data + struct.pack('>I', zlib.crc32(kind + data) & 0xffffffff)
+          png = b'\x89PNG\r\n\x1a\n' + chunk(b'IHDR', struct.pack('>IIBBBBB', width, height, 8, 6, 0, 0, 0)) + chunk(b'IDAT', zlib.compress(raw, 9)) + chunk(b'IEND', b'')
+          ico = struct.pack('<HHH', 0, 1, 1) + struct.pack('<BBBBHHII', 32, 32, 0, 0, 1, 32, len(png), 22) + png
+          Path('public').mkdir(exist_ok=True)
+          Path('public/favicon.ico').write_bytes(ico)
+          PY
+
+      - name: Install validation dependencies
+        run: npm install --save-dev eslint globals @playwright/test
+
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+
+      - name: Run lint
+        run: npm run lint
+
+      - name: Run unit tests
+        run: npm test
+
+      - name: Run production build
+        run: npm run build
+
+      - name: Run Playwright smoke test
+        run: npm run test:e2e
+
+      - name: Confirm scoped changes
+        run: git status --short
+
+      - name: Commit validated cleanup
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .gitignore index.html package.json package-lock.json eslint.config.js playwright.config.js tests/smoke.spec.js src/App.jsx src/components/Modal.jsx src/components/FlagDisplay.jsx src/utils/flagDisplay.js src/utils/flagDisplay.test.js public/favicon.ico public/flags
+          git commit -m "Complete Phase 1 stability cleanup"
+          git push origin HEAD:agent/phase-1-stability-cleanup
