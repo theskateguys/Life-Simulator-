@@ -1,6 +1,7 @@
 import React from 'react';
 import { C } from '../data/gameData.js';
 import dangerStormSticker from '../assets/stickers/danger-storm.png';
+import { FlagLabel } from './FlagDisplay.jsx';
 
 // Map event category to severity for visual treatment
 function getSeverityStyle(event) {
@@ -144,7 +145,7 @@ export function EventModal({event, onChoose}) {
               onMouseEnter={e=>{e.currentTarget.style.background=`${sv.hdr}20`;e.currentTarget.style.borderColor=`${sv.hdr}80`;}}
               onMouseLeave={e=>{e.currentTarget.style.background=`${sv.hdr}${index===0?'0F':'08'}`;e.currentTarget.style.borderColor=`${sv.hdr}${index===0?'55':'35'}`;}}
             >
-              <span style={{display:'block',fontWeight:800,fontSize:12,lineHeight:1.5}}>{choice.label}</span>
+              <span style={{display:'block',fontWeight:800,fontSize:12,lineHeight:1.5}}><FlagLabel text={choice.label} /></span>
             </button>
           ))}
         </div>
