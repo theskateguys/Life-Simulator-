@@ -37,7 +37,9 @@ jobs:
           cache: npm
 
       - name: Apply approved patch
-        run: python scripts/phase1_cleanup.py
+        run: |
+          python scripts/phase1_cleanup.py
+          python scripts/fix_test_naming.py
 
       - name: Install validation dependencies
         run: npm install --save-dev eslint globals @playwright/test
@@ -60,7 +62,7 @@ jobs:
       - name: Record validated patch
         shell: bash
         run: |
-          rm -f scripts/phase1_cleanup.py .github/workflows/phase1-stability-cleanup.yml
+          rm -f scripts/phase1_cleanup.py scripts/fix_test_naming.py .github/workflows/phase1-stability-cleanup.yml
           rmdir scripts 2>/dev/null || true
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
