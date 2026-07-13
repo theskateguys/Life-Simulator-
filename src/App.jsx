@@ -4,7 +4,7 @@ import {
 } from './data/gameData.js';
 import {
   YEAR_FOCUS, applyAction, applyEventChoice, canUseAction, clearSave, createInitialGame, endYear, evaluateDeath,
-  fmt, hasSave, islandById, loadGame, nextYear, refreshFinance, saveGame, startNextGeneration, totalNetWorth
+  defaultPlayerSettings, fmt, hasSave, islandById, loadGame, nextYear, refreshFinance, saveGame, startNextGeneration, totalNetWorth
 } from './engine/gameLogic.js';
 import { EventModal, OutcomeModal } from './components/Modal.jsx';
 import ActionCard from './components/ActionCard.jsx';
@@ -12,6 +12,7 @@ import FinancePanel from './components/FinancePanel.jsx';
 import FamilyPanel from './components/FamilyPanel.jsx';
 import YearReview from './components/YearReview.jsx';
 import SkatePanel from './components/SkatePanel.jsx';
+import IslandMark from './components/IslandMark.jsx';
 import moneySavingsSticker from './assets/stickers/money-savings.png';
 import propertyHomeKeySticker from './assets/stickers/property-home-key.png';
 import businessStorefrontSticker from './assets/stickers/business-storefront.png';
@@ -57,6 +58,49 @@ function CategoryVisual({category, selected=false}) {
 
 function StatPill({emoji,label,value,color}) {
   return <div style={{background:`${color}0B`,border:`1px solid ${color}22`,borderRadius:9,padding:'5px 6px',textAlign:'center'}}><p style={{color:C.faint,fontSize:7,margin:'0 0 2px'}}>{emoji} {label}</p><p style={{fontSize:11,fontWeight:900,color,margin:0}}>{Math.round(value)}</p></div>;
+}
+
+const TEXT_SIZE_OPTIONS = [
+  ['compact','Compact'],
+  ['standard','Standard'],
+  ['large','Large']
+];
+
+function PlayerSettingsPanel({settings,onChange,accent}) {
+  return (
+    <div className="story-panel settings-panel" style={{borderColor:`${accent}38`}}>
+      <div className="settings-panel__header">
+        <div>
+          <p style={{fontSize:10,color:accent,fontWeight:900,letterSpacing:1.5,textTransform:'uppercase',margin:'0 0 3px'}}>Player settings</p>
+          <p style={{fontSize:11,color:C.dim,margin:0}}>Saved with this life</p>
+        </div>
+        <label className="settings-toggle">
+          <input
+            type="checkbox"
+            checked={settings.reducedMotion}
+            onChange={event=>onChange({reducedMotion:event.target.checked})}
+          />
+          <span>Reduced motion</span>
+        </label>
+      </div>
+      <div className="settings-row">
+        <span>Text size</span>
+        <div className="settings-segment" role="group" aria-label="Text size">
+          {TEXT_SIZE_OPTIONS.map(([id,label])=>(
+            <button
+              key={id}
+              type="button"
+              onClick={()=>onChange({textSize:id})}
+              className={settings.textSize === id ? 'is-active' : ''}
+              style={{'--settings-accent':accent}}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 const ACTION_STORIES = {
@@ -314,13 +358,14 @@ export default function App() {
   const [outcome,setOutcome] = useState(null);
   const [deathMessage,setDeathMessage] = useState('');
   const [toast,setToast] = useState('');
-  const [open,setOpen] = useState({stats:false,skills:false,finance:false,family:false,achievements:false});
+  const [open,setOpen] = useState({settings:false,stats:false,skills:false,finance:false,family:false,achievements:false});
 
   const island = game ? islandById(game.islandId) : (selectedIsland ? islandById(selectedIsland) : null);
   const activeTheme = game?.themeMode || themeMode;
   const activeBackground = screenBackground(activeTheme);
   const activeGoal = LIFE_GOALS.find(goal=>goal.id === (game?.goalId || selectedGoal)) || LIFE_GOALS[0];
   const activeAvatar = AVATARS.find(avatar=>avatar.id === (game?.avatarId || selectedAvatar)) || AVATARS[0];
+  const playerSettings = game?.playerSettings || defaultPlayerSettings();
   const finance = game ? refreshFinance(game).finance : null;
   const money = value => fmt(value,island);
 
@@ -329,6 +374,16 @@ export default function App() {
     const timer = window.setTimeout(()=>setToast(''),3100);
     return ()=>window.clearTimeout(timer);
   },[toast]);
+
+  useEffect(()=>{
+    const root = document.documentElement;
+    root.dataset.islandReducedMotion = playerSettings.reducedMotion ? 'true' : 'false';
+    root.dataset.islandTextSize = playerSettings.textSize;
+    return () => {
+      delete root.dataset.islandReducedMotion;
+      delete root.dataset.islandTextSize;
+    };
+  },[playerSettings.reducedMotion, playerSettings.textSize]);
 
   const newGame = () => {
     if (!selectedIsland || !selectedBackground) return;
@@ -346,6 +401,14 @@ export default function App() {
   const saveCurrent = () => {
     const okay = game && saveGame(game);
     setToast(okay ? '✓ Game saved.' : 'Save failed in this browser.');
+  };
+
+  const updatePlayerSettings = changes => {
+    if (!game) return;
+    const next = {...game, playerSettings:{...playerSettings, ...changes}};
+    setGame(next);
+    const okay = saveGame(next);
+    setToast(okay ? 'Settings saved.' : 'Settings updated for this session.');
   };
 
   const showResultToast = (result) => {
@@ -408,7 +471,7 @@ export default function App() {
     if (!game) return;
     if (game.age >= 75) { setScreen(screens.end); return; }
     const next = nextYear(game);
-    setGame(next); setScreen(screens.game); setSelectedCategory(null); setOpen({stats:false,skills:false,finance:false,family:false,achievements:false});
+    setGame(next); setScreen(screens.game); setSelectedCategory(null); setOpen({settings:false,stats:false,skills:false,finance:false,family:false,achievements:false});
   };
 
   const selectHeir = child => {
@@ -467,7 +530,7 @@ export default function App() {
 
   if (screen === screens.island) return <div style={{minHeight:'100vh',background:activeBackground,color:C.text,padding:'24px 16px'}}><div style={{maxWidth:500,margin:'0 auto'}}>
     <p style={{fontSize:10,letterSpacing:2,color:C.gold,fontWeight:900,margin:'0 0 4px'}}>STEP 1 OF 3</p><h2 style={{fontSize:27,margin:'0 0 13px'}}>Choose Your Island</h2>
-    <div style={{display:'flex',flexDirection:'column',gap:8}}>{ISLANDS.map(entry=><button key={entry.id} onClick={()=>{setSelectedIsland(entry.id);setScreen(screens.background);}} style={{textAlign:'left',cursor:'pointer',padding:'13px 14px',borderRadius:13,border:`1px solid ${C.turquoise}30`,background:`${C.turquoise}08`,color:C.text}}><div style={{display:'flex',gap:10,alignItems:'center'}}><span style={{fontSize:28}}>{entry.flag}</span><div style={{flex:1}}><p style={{fontWeight:900,margin:'0 0 2px'}}>{entry.name}</p><p style={{fontSize:10,color:C.dim,margin:0}}>{entry.tag}</p></div><span style={{fontSize:10,color:C.green,fontWeight:800}}>{entry.currency}</span></div><p style={{fontSize:9,color:C.faint,margin:'7px 0 0'}}>Cost of living: {money ? '' : ''}{entry.monthlyEssentials.toLocaleString()}/mo · {entry.festival} · property from {entry.currency}{Math.round(entry.propertyPrice*0.2).toLocaleString()} deposit</p></button>)}</div>
+    <div style={{display:'flex',flexDirection:'column',gap:8}}>{ISLANDS.map(entry=><button key={entry.id} onClick={()=>{setSelectedIsland(entry.id);setScreen(screens.background);}} style={{textAlign:'left',cursor:'pointer',padding:'13px 14px',borderRadius:13,border:`1px solid ${C.turquoise}30`,background:`${C.turquoise}08`,color:C.text}}><div style={{display:'flex',gap:10,alignItems:'center'}}><IslandMark island={entry} /><div style={{flex:1}}><p style={{fontWeight:900,margin:'0 0 2px'}}>{entry.name}</p><p style={{fontSize:10,color:C.dim,margin:0}}>{entry.tag}</p></div><span style={{fontSize:10,color:C.green,fontWeight:800}}>{entry.currency}</span></div><p style={{fontSize:9,color:C.faint,margin:'7px 0 0'}}>Cost of living: {money ? '' : ''}{entry.monthlyEssentials.toLocaleString()}/mo · {entry.festival} · property from {entry.currency}{Math.round(entry.propertyPrice*0.2).toLocaleString()} deposit</p></button>)}</div>
     <Button secondary accent={C.dim} onClick={()=>setScreen(screens.title)} style={{marginTop:14}}>← Back</Button>
   </div></div>;
 
@@ -481,7 +544,7 @@ export default function App() {
     <p style={{fontSize:10,letterSpacing:2,color:C.gold,fontWeight:900,margin:'0 0 4px'}}>STEP 3 OF 3</p><h2 style={{fontSize:27,margin:'0 0 13px'}}>Start Your Story</h2>
     <Card style={{padding:12,marginBottom:10,borderColor:`${C.gold}32`}}><p style={{fontSize:10,color:C.gold,fontWeight:900,letterSpacing:1.4,margin:'0 0 4px'}}>YOUR PATH</p><p style={{fontSize:13,color:C.text,fontWeight:900,margin:'0 0 3px'}}>{activeGoal.emoji} {activeGoal.label}</p><p style={{fontSize:10,color:C.dim,lineHeight:1.45,margin:0}}>{activeGoal.text}</p></Card>
     <Card style={{padding:15,marginBottom:12}}><label style={{display:'block',fontSize:11,color:C.dim,fontWeight:800,marginBottom:6}}>YOUR NAME</label><input value={name} onChange={event=>setName(event.target.value)} placeholder="Type your character's name" style={{width:'100%',boxSizing:'border-box',padding:'11px 12px',borderRadius:10,border:'1px solid rgba(255,255,255,.18)',background:'#071622',color:C.text,fontSize:14,outline:'none'}} />
-      <p style={{fontSize:11,color:C.dim,margin:'15px 0 7px'}}>YOUR LOOK</p><p style={{fontSize:10,color:C.faint,margin:'0 0 8px'}}>Pick a simple face for your character. We can make this deeper later.</p>
+      <p style={{fontSize:11,color:C.dim,margin:'15px 0 7px'}}>YOUR LOOK</p><p style={{fontSize:10,color:C.faint,margin:'0 0 8px'}}>Pick a simple face for your character.</p>
       <div style={{display:'grid',gridTemplateColumns:'repeat(3,1fr)',gap:7}}>{AVATARS.map(avatar=><button key={avatar.id} onClick={()=>setSelectedAvatar(avatar.id)} style={{padding:'10px 6px',borderRadius:10,border:`1px solid ${selectedAvatar===avatar.id?C.gold:'rgba(255,255,255,.14)'}`,background:selectedAvatar===avatar.id?`${C.gold}16`:'rgba(255,255,255,.03)',color:selectedAvatar===avatar.id?C.gold:C.dim,cursor:'pointer',fontWeight:800,fontSize:9}}><span style={{display:'block',fontSize:24,marginBottom:3}}>{avatar.emoji}</span>{avatar.label}</button>)}</div>
       <p style={{fontSize:11,color:C.dim,margin:'15px 0 7px'}}>ROMANCE PATH</p><p style={{fontSize:10,color:C.faint,margin:'0 0 8px'}}>This only determines who may appear as a potential partner in your character’s story.</p>
       <div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:7}}>{[['women','Women'],['men','Men'],['any','Any'],['none','Not seeking romance']].map(([id,label])=><button key={id} onClick={()=>setPreference(id)} style={{padding:9,borderRadius:9,border:`1px solid ${preference===id?C.pink:'rgba(255,255,255,.14)'}`,background:preference===id?`${C.pink}19`:'rgba(255,255,255,.03)',color:preference===id?C.pink:C.dim,cursor:'pointer',fontWeight:700,fontSize:11}}>{label}</button>)}</div>
@@ -506,7 +569,7 @@ export default function App() {
     const netWorth = totalNetWorth(game);
     const score = netWorth/700 + game.stats.happiness + game.stats.integrity + game.stats.communityStanding;
     const rating = score>420 ? ['Caribbean Legend 👑',C.gold,'You built wealth, kept your word, and earned the island’s trust.'] : score>300 ? ['Island Success Story 🌟',C.green,'Solid, honest, and real. The island remembers the right things.'] : score>170 ? ['Still Finding the Way 🌱',C.turquoise,'The hard lessons became tuition for the next chapter.'] : ['The Comeback Starts Now 💪',C.coral,'The road was hard, but survival still counts.'];
-    return <div style={{minHeight:'100vh',background:activeBackground,color:C.text,padding:'26px 14px 48px'}}><div style={{maxWidth:480,margin:'0 auto',textAlign:'center'}}><div style={{fontSize:48}}>{island.flag}</div><h1 style={{fontSize:29,margin:'4px 0'}}>{game.name}'s Story</h1><p style={{color:rating[1],fontWeight:900,fontSize:17,margin:'4px 0'}}>{rating[0]}</p><p style={{fontSize:12,color:C.dim,margin:'0 0 14px'}}>Age {game.age} · Generation {game.generation} · {island.name}</p><Card style={{padding:15,textAlign:'left',marginBottom:12}}>{[
+    return <div style={{minHeight:'100vh',background:activeBackground,color:C.text,padding:'26px 14px 48px'}}><div style={{maxWidth:480,margin:'0 auto',textAlign:'center'}}><IslandMark island={island} className="island-mark--large" /><h1 style={{fontSize:29,margin:'4px 0'}}>{game.name}'s Story</h1><p style={{color:rating[1],fontWeight:900,fontSize:17,margin:'4px 0'}}>{rating[0]}</p><p style={{fontSize:12,color:C.dim,margin:'0 0 14px'}}>Age {game.age} · Generation {game.generation} · {island.name}</p><Card style={{padding:15,textAlign:'left',marginBottom:12}}>{[
       ['💰','Net worth',money(netWorth),C.green],['🏦','Cash',money(game.finance.cash),C.gold],['📈','Investments',money(game.finance.investments),C.turquoise],['🏠','Property value',money(game.finance.propertyValue),C.teal],['🏘️','Community',`${Math.round(game.stats.communityStanding)}/100`,C.pink],['⚖️','Integrity',`${Math.round(game.stats.integrity)}/100`,C.gold]
     ].map(([emoji,label,value,color])=><div key={label} style={{display:'flex',justifyContent:'space-between',padding:'5px 0'}}><span style={{fontSize:12,color:C.dim}}>{emoji} {label}</span><span style={{fontSize:12,color,fontWeight:900}}>{value}</span></div>)}</Card><p style={{fontSize:12,color:C.muted,lineHeight:1.7,margin:'0 0 14px'}}>{rating[2]}</p><Button onClick={restart} style={{width:'100%',fontSize:14}}>🌴 Begin a New Life</Button></div></div>;
   }
@@ -531,13 +594,13 @@ export default function App() {
       ['Cash',money(finance.cash),finance.cash>2000?C.green:C.gold],
       ['Focus',`${YEAR_FOCUS-game.yearFocus}/${YEAR_FOCUS} left`,theme.primary]
     ];
-    return <div className="story-shell" style={{'--island-primary':theme.primary,'--island-secondary':theme.secondary,'--island-deep':theme.deep,'--island-soft':theme.soft}}>
+    return <div className="story-shell" data-reduced-motion={playerSettings.reducedMotion ? 'true' : 'false'} data-text-size={playerSettings.textSize} style={{'--island-primary':theme.primary,'--island-secondary':theme.secondary,'--island-deep':theme.deep,'--island-soft':theme.soft}}>
       <Toast text={toast}/>
       <div className="story-wrap soft-scroll">
         <section className="story-hero dashboard-hero">
           <div style={{position:'relative',zIndex:1}}>
             <div className="hero-main-row">
-              <div className="avatar-orb">{activeAvatar.emoji}<span className="flag-chip">{island.flag}</span></div>
+              <div className="avatar-orb">{activeAvatar.emoji}<IslandMark island={island} className="flag-chip" /></div>
               <div style={{flex:1,minWidth:0}}>
                 <p style={{fontSize:10,color:theme.primary,fontWeight:900,letterSpacing:1.7,textTransform:'uppercase',margin:'0 0 4px'}}>Age {game.age} · {island.name}</p>
                 <h1 className="hero-title">{mood.title}</h1>
@@ -631,6 +694,7 @@ export default function App() {
             </div>) : <p style={{fontSize:11,color:C.dim,lineHeight:1.5,margin:0}}>No choices yet this age. Pick the first chapter and let the year start moving.</p>}
           </section>
 
+          <div className="story-panel" style={{marginBottom:8,borderColor:`${theme.primary}30`}}><button className="detail-toggle" onClick={()=>setOpen(state=>({...state,settings:!state.settings}))} style={{color:theme.primary}}>Player Settings <span>{open.settings?'▲':'▼'}</span></button>{open.settings&&<div style={{padding:'0 12px 12px'}}><PlayerSettingsPanel settings={playerSettings} onChange={updatePlayerSettings} accent={theme.primary}/></div>}</div>
           <div className="story-panel" style={{marginBottom:8,borderColor:`${C.green}30`}}><button className="detail-toggle" onClick={()=>setOpen(state=>({...state,stats:!state.stats}))} style={{color:C.green}}>Stats & Money <span>{open.stats?'▲':'▼'}</span></button>{open.stats&&<div style={{padding:'0 12px 12px'}}><div style={{display:'grid',gridTemplateColumns:'1fr 1fr',gap:6,marginBottom:10}}>{statRows.map(([emoji,label,key,accent])=>{const value=Math.round(game.stats[key]); const color=statTone(key,value); return <div key={key} style={{background:`${accent}09`,border:`1px solid ${accent}1F`,borderRadius:9,padding:'7px 8px'}}><p style={{fontSize:9,color:C.dim,margin:'0 0 2px'}}>{emoji} {label}</p><p style={{fontSize:14,fontWeight:900,color,margin:'0 0 4px'}}>{value}</p><div style={{height:3,borderRadius:2,background:'rgba(255,255,255,.08)',overflow:'hidden'}}><div style={{height:3,width:`${value}%`,background:color}} /></div></div>})}</div><FinancePanel game={game} finance={finance} island={island} fmt={money}/></div>}</div>
           <div className="story-panel" style={{marginBottom:8,borderColor:`${C.turquoise}30`}}><button className="detail-toggle" onClick={()=>setOpen(state=>({...state,skills:!state.skills}))} style={{color:C.turquoise}}>Skills <span>{open.skills?'▲':'▼'}</span></button>{open.skills&&<div style={{padding:'0 12px 12px'}}>{SKILLS.map(skill=>{const value=game.skills[skill.id]||0; return <div key={skill.id} style={{margin:'8px 0'}}><div style={{display:'flex',justifyContent:'space-between',fontSize:10,marginBottom:3}}><span style={{color:C.muted}}>{skill.emoji} {skill.label}</span><span style={{color:skill.color,fontWeight:900}}>{value}{skillLabelText(skill.id,value)}</span></div><div style={{height:4,borderRadius:3,background:'rgba(255,255,255,.07)',overflow:'hidden'}}><div style={{height:4,width:`${value}%`,background:skill.color}} /></div></div>})}</div>}</div>
           <div className="story-panel" style={{marginBottom:8,borderColor:`${C.pink}30`}}><button className="detail-toggle" onClick={()=>setOpen(state=>({...state,family:!state.family}))} style={{color:C.pink}}>Family · {familyHeadline} <span>{open.family?'▲':'▼'}</span></button>{open.family&&<div style={{padding:'0 12px 12px'}}><FamilyPanel game={game}/></div>}</div>

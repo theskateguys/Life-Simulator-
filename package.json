@@ -7,13 +7,16 @@
     "dev": "vite --host 127.0.0.1 --open",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "vitest run"
+    "test": "vitest run",
+    "smoke": "node tests/island-life.smoke.mjs",
+    "check": "npm test && npm run build"
   },
   "dependencies": {
     "react": "18.3.1",
     "react-dom": "18.3.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@vitejs/plugin-react": "6.0.3",
     "vite": "8.1.3",
     "vitest": "^4.1.9"

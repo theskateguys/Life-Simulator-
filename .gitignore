@@ -3,8 +3,12 @@ dist/
 .env
 .env.*
 npm-debug.log*
+debug.log
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
+.playwright-cli/
+playwright-report/
+test-results/
 .DS_Store
 Thumbs.db

@@ -1,5 +1,6 @@
 import React from 'react';
 import { C, CAREERS } from '../data/gameData.js';
+import IslandMark from './IslandMark.jsx';
 
 const statusColor = (key,value) => {
   if (key === 'stress') return value > 65 ? C.coral : value > 35 ? C.gold : C.green;
@@ -14,7 +15,7 @@ export default function StatHeader({game, island, finance, fmt}) {
     <div style={{maxWidth:540,margin:'0 auto'}}>
       <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',gap:10,marginBottom:8}}>
         <div>
-          <p style={{fontWeight:900,color:C.gold,fontSize:14,margin:'0 0 2px'}}>{island.flag} {game.name}{game.generation>1?` · Gen ${game.generation}`:''}</p>
+          <p style={{fontWeight:900,color:C.gold,fontSize:14,margin:'0 0 2px',display:'inline-flex',alignItems:'center',gap:6}}><IslandMark island={island} className="island-mark--inline" /> {game.name}{game.generation>1?` · Gen ${game.generation}`:''}</p>
           <p style={{color:C.dim,fontSize:10,margin:0}}>Age {game.age} · {CAREERS[game.career]?.emoji} {CAREERS[game.career]?.label}{game.careerLevel>0?` Lv${game.careerLevel}`:''}{game.migration?` · ${game.migration.label}`:''}</p>
         </div>
         <div style={{textAlign:'right'}}>
