@@ -4,8 +4,10 @@ import {
   applyEventChoice,
   canUseAction,
   createInitialGame,
+  defaultPlayerSettings,
   endYear,
   findAction,
+  normalizePlayerSettings,
   refreshFinance,
   startNextGeneration
 } from './gameLogic.js';
@@ -156,6 +158,29 @@ describe('core game-engine regression rules', () => {
     expect(normalized.skating.stats.balance).toBe(0);
     expect(normalized.skating.gear.condition).toBe(0);
     expect(olderGame.skating).toBeUndefined();
+  });
+
+  it('normalizes older saves with default player settings', () => {
+    const base = fixtureGame();
+    const {playerSettings, ...olderGame} = base;
+
+    const normalized = refreshFinance(olderGame);
+
+    expect(playerSettings).toEqual(defaultPlayerSettings());
+    expect(normalized.playerSettings).toEqual(defaultPlayerSettings());
+    expect(olderGame.playerSettings).toBeUndefined();
+  });
+
+  it('keeps saved player settings compatible and rejects unknown text sizes', () => {
+    expect(normalizePlayerSettings({reducedMotion:true, textSize:'large'})).toEqual({
+      reducedMotion:true,
+      textSize:'large'
+    });
+
+    expect(normalizePlayerSettings({reducedMotion:1, textSize:'giant'})).toEqual({
+      reducedMotion:true,
+      textSize:'standard'
+    });
   });
 
   it('buys starter skates, unlocks skating, sets condition, and deducts cash once', () => {

@@ -60,6 +60,13 @@ export function defaultSkatingState() {
   };
 }
 
+export function defaultPlayerSettings() {
+  return {
+    reducedMotion:false,
+    textSize:'standard'
+  };
+}
+
 export function normalizeSkatingState(skating = {}) {
   const defaults = defaultSkatingState();
   return {
@@ -73,8 +80,23 @@ export function normalizeSkatingState(skating = {}) {
   };
 }
 
+export function normalizePlayerSettings(settings = {}) {
+  const defaults = defaultPlayerSettings();
+  const textSize = ['compact','standard','large'].includes(settings.textSize) ? settings.textSize : defaults.textSize;
+  return {
+    ...defaults,
+    ...settings,
+    reducedMotion:Boolean(settings.reducedMotion),
+    textSize
+  };
+}
+
 function normalizeGameState(game) {
-  return {...game, skating:normalizeSkatingState(game.skating)};
+  return {
+    ...game,
+    skating:normalizeSkatingState(game.skating),
+    playerSettings:normalizePlayerSettings(game.playerSettings)
+  };
 }
 
 export function createInitialGame({ islandId, backgroundId, name, preference, goalId = 'own_path', themeMode = 'sleek', avatarId = 'youth_neutral' }) {
@@ -90,6 +112,7 @@ export function createInitialGame({ islandId, backgroundId, name, preference, go
     goalId,
     themeMode,
     avatarId,
+    playerSettings:defaultPlayerSettings(),
     generation:1,
     age:18,
     stats:{
